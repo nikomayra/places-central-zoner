@@ -1,0 +1,43 @@
+# Ignore node_modules for frontend
+frontend/node_modules/
+
+# Ignore virtual environment for backend
+backend/venv/
+
+# Ignore Docker files
+**/Dockerfile
+**/docker-compose.yml
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore build output
+**/build/
+**/dist/
+
+# Ignore environment variables
+**/.env
+
+# Ignore log files
+**/logs/
+*.log
+
+# Ignore IDE-specific files
+.idea/
+.vscode/
+*.iml
+
+# Ignore coverage files
+**/coverage/
+**/coverage-final.json
+**/lcov-report/
+
+# Ignore temporary files
+**/.tmp/
+**/temp/
+**/tmp/
+
+# Ignore cache
+**/.cache/
+**/cache/
