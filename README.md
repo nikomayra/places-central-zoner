@@ -1,4 +1,4 @@
-# stores-zoner
+# locations-zoner
 
 ### Description:
 
