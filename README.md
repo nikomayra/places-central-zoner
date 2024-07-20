@@ -2,17 +2,17 @@
 
 ### Description:
 
-Stores-zoner is a simple web application that finds at most the top 5 central locations which each contain all searched locations within a minimized radius. For example, search for LA Fitness, Chipotle and Starbucks within the greater Seattle area and it will draw up to 5 circles with a center point which is at a minimum distance to clusters of those three stores. There are many stores in some cases and near by so that is where the minimization comes into play and no two circles with reuse the any of the same locations.
+Locations Zoner is a simple web application that finds central locations which each contain all searched locations within a minimized radius. For example, search for LA Fitness, Chipotle and Starbucks within the greater Seattle area and it will draw circles with a center point which is at a minimum distance to clusters of those three stores. TBD
 
 # Development plan:
 
 ## Tech Stack Combination:
 
-**Frontend:** React with TypeScript and Material-UI for the user interface.
-**Backend:** Flask (Python) for the backend logic and API.
-**Database:** PostgreSQL for robust data storage and management.
-**Mapping and Geolocation:** Google Maps API to handle mapping, store location searches, and distance calculations.
-**Deployment:** Render.com for hosting and managing your application.
+**Frontend:** React with TypeScript and Material-UI for the user interface.  
+**Backend:** Flask (Python) for the backend logic and API.  
+**Database:** PostgreSQL for robust data storage and management.  
+**Mapping and Geolocation:** Google Maps API to handle mapping, store location searches, and distance calculations.  
+**Deployment:** Render.com for hosting and managing your application.  
 
 ## Implementation Steps:
 
