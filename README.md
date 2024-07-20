@@ -10,9 +10,9 @@ Locations Zoner is a simple web application that finds central locations which e
 
 **Frontend:** React with TypeScript and Material-UI for the user interface.  
 **Backend:** Flask (Python) for the backend logic and API.  
-**Database:** PostgreSQL for robust data storage and management.  
+**Database:** PostgreSQL for data storage and management.  
 **Mapping and Geolocation:** Google Maps API to handle mapping, store location searches, and distance calculations.  
-**Deployment:** Render.com for hosting and managing your application.  
+**Deployment:** Render.com for hosting and managing the application.  
 
 ## Implementation Steps:
 
