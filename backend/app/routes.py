@@ -10,18 +10,16 @@ bp = Blueprint('routes', __name__)
 
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
 
-@bp.route('/search', methods=['GET'])
+@bp.route('/search-places', methods=['POST'])
 def search():
-    # data = request.json
+    data = request.json
     # Example data structure: 
-    # {place_names': ['LA Fitness', 'Chipotle', 'Starbucks'], 
-    # 'search_center': 'New York, NY',
-    # 'search_radius'
-    # }
+    # placeNames: [{placeNames: {'LA Fitness', 'Chipotle', 'Starbucks'}}]
+    # search_center = [47.645163, -122.335534] # data['location']
+    # search_radius = 50
+
+    # place_names = ['LA Fitness', 'chipotle', 'starbucks'] # data['stores']
     
-    place_names = ['LA Fitness', 'chipotle', 'starbucks'] # data['stores']
-    search_center = [47.645163, -122.335534] # data['location']
-    search_radius = 50
     maxResultantCount = 10
 
 
@@ -53,8 +51,7 @@ def get_places_data(place_name, search_center, search_radius, maxResultantCount)
     if response.status_code == 200:
         data = response.json()
         return data
-    return response.raise_for_status()
-
+    return response.raise_for_status() # Replace with soft failure.
 
 # Initial clustering using KMeans
 def initial_clustering(coords, max_clusters):

@@ -19,19 +19,22 @@ Locations Zoner is a simple web application that finds central locations which e
 1. (80%) Frontend Development:
 
    - Set up a React project with TypeScript.
-   - Integrate Material-UI for a responsive and modern UI.
-   - Implement input fields for store names and a map component using Google Maps API.
+   - Integrate Material-UI.
+   - Implement input fields for places names and a map component using Google Maps API.
+     -Implement map search area refinement. Limit max search area and allow user to search to quickly center map. Maybe autocomplete library or other.
 
 2. (20%) Backend Development:
 
    - Set up a Flask project.
    - Create endpoints to interact with the Google Places API and Distance Matrix API.
    - Implement logic to calculate the central minimum locations based on store distances.
+     -Setup PostgreSQL for storing/handling backend data.
 
 3. Mapping and Geolocation:
 
-   - Use the Google Maps API to display the map and markers for the stores.
+   - Use the Google Maps API to display the map and markers for the places.
    - Calculate the central points and draw circles representing the radius to the farthest store.
+     -Use Google Maps API for drawing central zones
 
 4. Implement OAuth and any other protection to avoid unnecessary Google API calls.
 

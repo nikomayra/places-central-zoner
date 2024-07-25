@@ -1,50 +1,60 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { TextField, Button, Box, IconButton } from '@mui/material';
 import { Delete } from '@mui/icons-material';
+import axiosService from '../services/axiosService';
 
-const LocationInput: React.FC = () => {
-  const [locations, setLocations] = useState<string[]>(['', '']);
-  const maxLocations = 5;
-  const minLocations = 2;
+interface PlaceNamesInputProps {
+  placeNames: string[];
+  setPlaceNames: React.Dispatch<React.SetStateAction<string[]>>;
+}
+
+const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
+  placeNames,
+  setPlaceNames,
+}) => {
+  const maxplaceNames = 5;
+  const minplaceNames = 2;
 
   const handleChange = (index: number, value: string) => {
-    const newLocations = [...locations];
-    newLocations[index] = value;
-    setLocations(newLocations);
+    const newplaceNames = [...placeNames];
+    newplaceNames[index] = value;
+    setPlaceNames(newplaceNames);
   };
 
   const handleAddLocationInput = () => {
-    if (locations.length >= maxLocations) {
+    if (placeNames.length >= maxplaceNames) {
       window.alert('Reached max inputs...');
     } else {
-      const newLocations = [...locations];
-      newLocations[locations.length] = '';
-      setLocations(newLocations);
+      const newplaceNames = [...placeNames];
+      newplaceNames[placeNames.length] = '';
+      setPlaceNames(newplaceNames);
     }
   };
 
-  const handleSearch = () => {
-    if (locations.length < minLocations) {
-      window.alert('Minimum 2 locations...');
+  const handleSearch = async () => {
+    if (placeNames.length < minplaceNames) {
+      window.alert('Minimum 2 placeNames...');
     } else {
       // Logic to handle search
-      console.log(locations);
+      console.log('placeNames', placeNames);
+      const placesplaceNames = await axiosService.searchPlaces(placeNames);
+      console.log('placesplaceNames', placesplaceNames);
     }
   };
 
   const handleDeleteLocationInput = (index: number) => {
-    setLocations((prevLocations) =>
-      prevLocations.filter((_, i) => i !== index)
+    setPlaceNames((prevplaceNames) =>
+      prevplaceNames.filter((_, i) => i !== index)
     );
   };
 
   return (
     <Box display='flex' flexDirection='column' gap={2}>
-      {locations.map((location, index) => (
+      {placeNames.map((placeName, index) => (
         <Box display='flex' flexDirection='row' gap={1} key={index}>
           <TextField
-            label={`Location ${index + 1}`}
-            value={location}
+            label={`Place ${index + 1}`}
+            value={placeName}
             onChange={(e) => handleChange(index, e.target.value)}
             variant='outlined'
             style={{ flexGrow: 1 }}
@@ -74,4 +84,4 @@ const LocationInput: React.FC = () => {
   );
 };
 
-export default LocationInput;
+export default PlaceNamesInput;
