@@ -6,11 +6,16 @@ import axiosService from '../services/axiosService';
 interface PlaceNamesInputProps {
   placeNames: string[];
   setPlaceNames: React.Dispatch<React.SetStateAction<string[]>>;
+  showAlert: (
+    severity: 'success' | 'info' | 'warning' | 'error',
+    message: string
+  ) => void;
 }
 
 const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   placeNames,
   setPlaceNames,
+  showAlert,
 }) => {
   const maxplaceNames = 5;
   const minplaceNames = 2;
@@ -23,7 +28,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 
   const handleAddLocationInput = () => {
     if (placeNames.length >= maxplaceNames) {
-      window.alert('Reached max inputs...');
+      showAlert('error', 'Reached max inputs...');
     } else {
       const newplaceNames = [...placeNames];
       newplaceNames[placeNames.length] = '';
@@ -33,12 +38,15 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 
   const handleSearch = async () => {
     if (placeNames.length < minplaceNames) {
-      window.alert('Minimum 2 placeNames...');
+      showAlert('error', 'Minimum 2 locations...');
     } else {
-      // Logic to handle search
-      console.log('placeNames', placeNames);
-      const placesplaceNames = await axiosService.searchPlaces(placeNames);
-      console.log('placesplaceNames', placesplaceNames);
+      try {
+        const placesLocations = await axiosService.searchPlaces(placeNames);
+        showAlert('success', 'Search completed successfully!');
+        console.log('placesLocations', placesLocations);
+      } catch (error) {
+        showAlert('error', 'Search failed.');
+      }
     }
   };
 
@@ -49,7 +57,16 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   };
 
   return (
-    <Box display='flex' flexDirection='column' gap={2}>
+    <Box
+      display='flex'
+      flexDirection='column'
+      gap={2}
+      sx={{
+        border: '3px solid #1976d2',
+        padding: '15px',
+        borderRadius: '10px',
+      }}
+    >
       {placeNames.map((placeName, index) => (
         <Box display='flex' flexDirection='row' gap={1} key={index}>
           <TextField
