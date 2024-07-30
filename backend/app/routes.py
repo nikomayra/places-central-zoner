@@ -19,14 +19,15 @@ def search():
     # search_radius = 50
 
     # place_names = ['LA Fitness', 'chipotle', 'starbucks'] # data['stores']
-    
+    print('data: ', data)
     maxResultantCount = 10
 
-
-    locations = get_places_data(place_name, search_center,search_radius, maxResultantCount)
-    # central_locations = get_central_locations(location_names, search_center, search_radius, maxResultantCount)
     
-    return jsonify(locations)
+    #locations = get_places_data(place_name, search_center,search_radius, maxResultantCount)
+    # central_locations = get_central_locations(location_names, search_center, search_radius, maxResultantCount)
+    # TODO, return structured data of found locations - then in mark them in map component
+    # Make it so each different place name gets a diff color marker...
+    return jsonify({'message': 'done'})#jsonify(locations)
 
 # Returns json of places: displayName.text, id, location.latitude & longitude
 def get_places_data(place_name, search_center, search_radius, maxResultantCount):

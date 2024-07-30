@@ -1,7 +1,6 @@
 import React from 'react';
 import { TextField, Button, Box, IconButton } from '@mui/material';
 import { Delete } from '@mui/icons-material';
-import axiosService from '../services/axiosService';
 
 interface PlaceNamesInputProps {
   placeNames: string[];
@@ -17,9 +16,6 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   setPlaceNames,
   showAlert,
 }) => {
-  const maxplaceNames = 5;
-  const minplaceNames = 2;
-
   const handleChange = (index: number, value: string) => {
     const newplaceNames = [...placeNames];
     newplaceNames[index] = value;
@@ -27,8 +23,8 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   };
 
   const handleAddLocationInput = () => {
-    if (placeNames.length >= maxplaceNames) {
-      showAlert('error', 'Reached max inputs...');
+    if (placeNames.length >= 5) {
+      showAlert('error', 'Reached max inputs.');
     } else {
       const newplaceNames = [...placeNames];
       newplaceNames[placeNames.length] = '';
@@ -36,37 +32,18 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     }
   };
 
-  const handleSearch = async () => {
-    if (placeNames.length < minplaceNames) {
-      showAlert('error', 'Minimum 2 locations...');
+  const handleDeleteLocationInput = (index: number) => {
+    if (placeNames.length <= 2) {
+      showAlert('error', 'Reached minimum inputs.');
     } else {
-      try {
-        const placesLocations = await axiosService.searchPlaces(placeNames);
-        showAlert('success', 'Search completed successfully!');
-        console.log('placesLocations', placesLocations);
-      } catch (error) {
-        showAlert('error', 'Search failed.');
-      }
+      setPlaceNames((prevplaceNames) =>
+        prevplaceNames.filter((_, i) => i !== index)
+      );
     }
   };
 
-  const handleDeleteLocationInput = (index: number) => {
-    setPlaceNames((prevplaceNames) =>
-      prevplaceNames.filter((_, i) => i !== index)
-    );
-  };
-
   return (
-    <Box
-      display='flex'
-      flexDirection='column'
-      gap={2}
-      sx={{
-        border: '3px solid #1976d2',
-        padding: '15px',
-        borderRadius: '10px',
-      }}
-    >
+    <Box display='flex' flexDirection='column' gap={2}>
       {placeNames.map((placeName, index) => (
         <Box display='flex' flexDirection='row' gap={1} key={index}>
           <TextField
@@ -93,9 +70,6 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         onClick={handleAddLocationInput}
       >
         Add location...
-      </Button>
-      <Button variant='contained' color='primary' onClick={handleSearch}>
-        Search
       </Button>
     </Box>
   );

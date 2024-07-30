@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Slider, Box, Tooltip, TextField } from '@mui/material';
 import { TrackChanges } from '@mui/icons-material';
 import {
@@ -10,22 +10,33 @@ import {
 } from '@vis.gl/react-google-maps';
 
 type PlaceLocation = {
+  name: string;
   lat: number;
   lng: number;
 };
 
+interface GeoLocation {
+  lat: number;
+  lng: number;
+}
+
 interface MapComponentProps {
   placeLocations: PlaceLocation[];
+  searchCenter: GeoLocation;
+  setSearchCenter: React.Dispatch<React.SetStateAction<GeoLocation>>;
+  searchRadius: number;
+  setSearchRadius: React.Dispatch<React.SetStateAction<number>>;
 }
 // 1609.34 meters = miles
-const MapComponent: React.FC<MapComponentProps> = ({ placeLocations }) => {
+const MapComponent: React.FC<MapComponentProps> = ({
+  placeLocations,
+  searchCenter,
+  setSearchCenter,
+  searchRadius,
+  setSearchRadius,
+}) => {
   const map = useMap();
   const circleRef = useRef<google.maps.Circle | null>(null);
-  const [searchCenter, setSearchCenter] = useState<PlaceLocation>({
-    lat: 47.608013,
-    lng: -122.335167,
-  });
-  const [searchRadius, setRadius] = useState<number>(5); // Default 5 mile radius
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const places = useMapsLibrary('places');
@@ -46,15 +57,18 @@ const MapComponent: React.FC<MapComponentProps> = ({ placeLocations }) => {
       );
 
       autocompleteRef.current.addListener('place_changed', () => {
-        console.log('PLACE CHANGED...');
+        //console.log('PLACE CHANGED...');
         const place = autocompleteRef.current?.getPlace();
         if (place?.geometry?.location) {
           const location = place.geometry.location;
-          setSearchCenter({ lat: location.lat(), lng: location.lng() });
+          setSearchCenter({
+            lat: location.lat(),
+            lng: location.lng(),
+          });
         }
       });
     }
-  }, [places]);
+  }, [places, setSearchCenter]);
 
   // Find & set the bounds for the 'square' map given a circle search area
   useEffect(() => {
@@ -119,16 +133,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ placeLocations }) => {
    */
 
   return (
-    <Box
-      display='flex'
-      flexDirection='column'
-      gap={2}
-      sx={{
-        border: '3px solid #1976d2',
-        padding: '15px',
-        borderRadius: '10px',
-      }}
-    >
+    <Box display='flex' flexDirection='column' gap={2}>
       <Box display='flex' flexDirection='row' gap={2}>
         <TextField
           inputRef={inputRef}
@@ -148,7 +153,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ placeLocations }) => {
           <Slider
             aria-label='Search Radius'
             value={searchRadius}
-            onChange={(_, value) => setRadius(value as number)}
+            onChange={(_, value) => setSearchRadius(value as number)}
             valueLabelDisplay='auto'
             shiftStep={5}
             step={2}
@@ -183,7 +188,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ placeLocations }) => {
         {placeLocations.map((loc) => (
           <AdvancedMarker
             position={{ lat: loc.lat, lng: loc.lng }}
-            title={'AdvancedMarker with customized pin.'}
+            title={loc.name}
             clickable={true}
             onClick={() => console.log('Marker Clicked!!')}
           >
