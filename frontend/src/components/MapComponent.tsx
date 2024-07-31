@@ -20,12 +20,20 @@ interface GeoLocation {
   lng: number;
 }
 
+interface Cluster {
+  center: GeoLocation;
+  cluster: number;
+  places: PlaceLocation[];
+  wcss: number;
+}
+
 interface MapComponentProps {
   placeLocations: PlaceLocation[];
   searchCenter: GeoLocation;
   setSearchCenter: React.Dispatch<React.SetStateAction<GeoLocation>>;
   searchRadius: number;
   setSearchRadius: React.Dispatch<React.SetStateAction<number>>;
+  clusters: Cluster[];
 }
 // 1609.34 meters = miles
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -34,6 +42,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   setSearchCenter,
   searchRadius,
   setSearchRadius,
+  clusters,
 }) => {
   const map = useMap();
   const circleRef = useRef<google.maps.Circle | null>(null);
@@ -42,6 +51,38 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const places = useMapsLibrary('places');
   const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
 
+  // Utility function to convert HSL color to HSLA with a given alpha
+  const getColorWithAlpha = (color: string, alpha: number): string => {
+    if (!color) return `hsla(0, 0%, 0%, ${alpha})`; // Default to black if color is undefined
+    return color.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
+  };
+
+  const renderClusterPin = () => (
+    <svg
+      width='24'
+      height='24'
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <circle cx='12' cy='12' r='10' fill='red' />
+    </svg>
+  );
+
+  const getRandomColor = (() => {
+    let lastHue = Math.random() * 360;
+
+    return (): string => {
+      const hueDifference = 137; // Using a golden angle to get distinct hues
+      lastHue = (lastHue + hueDifference) % 360;
+      const saturation = 70; // Keep saturation constant
+      const lightness = 50; // Keep lightness constant
+
+      return `hsl(${lastHue}, ${saturation}%, ${lightness}%)`;
+    };
+  })();
+
+  // Autocomplete useEffect for dynamically changing map center.
   useEffect(() => {
     if (!places || !inputRef.current) return;
 
@@ -126,6 +167,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     };
   }, [map]);
 
+  // Define pin colors for markers, same color for each place type
   useEffect(() => {
     const newPlaceColors: { [key: string]: string } = { ...placeColors };
 
@@ -141,7 +183,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     ) {
       setPlaceColors(newPlaceColors);
     }
-  }, [placeLocations, placeColors]);
+  }, [placeLocations, placeColors, getRandomColor]);
 
   return (
     <Box display='flex' flexDirection='column' gap={2}>
@@ -203,24 +245,28 @@ const MapComponent: React.FC<MapComponentProps> = ({
             title={loc.name}
           >
             <Pin
-              background={placeColors[loc.name]}
+              background={getColorWithAlpha(
+                placeColors[loc.name] || 'hsl(0, 0%, 0%)',
+                clusters.length > 0 ? 0.3 : 1
+              )}
               borderColor={'#080808'}
-              glyphColor={'#000000'}
+              glyphColor={'#080808'}
+              scale={0.7}
             ></Pin>
+          </AdvancedMarker>
+        ))}
+        {clusters.map((cluster, index) => (
+          <AdvancedMarker
+            key={`cluster-${index}`}
+            position={{ lat: cluster.center.lat, lng: cluster.center.lng }}
+            title={`Cluster center: ${cluster.center.lat}, ${cluster.center.lng}`}
+          >
+            {renderClusterPin()}
           </AdvancedMarker>
         ))}
       </Map>
     </Box>
   );
-};
-
-const getRandomColor = (): string => {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
 };
 
 export default MapComponent;

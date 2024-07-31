@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import PlaceNamesInput from './components/PlaceNamesInput';
 import MapComponent from './components/MapComponent';
-import AnalyzeComponent from './components/AnalyzeComponent';
+//import AnalyzeComponent from './components/AnalyzeComponent';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import useAlert from './hooks/useAlert';
 import axiosService from './services/axiosService';
@@ -25,6 +25,13 @@ interface GeoLocation {
   lng: number;
 }
 
+interface Cluster {
+  center: GeoLocation;
+  cluster: number;
+  places: PlaceLocation[];
+  wcss: number;
+}
+
 const App: React.FC = () => {
   const { alert, showAlert, hideAlert } = useAlert();
   const [searchCenter, setSearchCenter] = useState<GeoLocation>({
@@ -35,18 +42,17 @@ const App: React.FC = () => {
   const [placeLocations, setPlaceLocations] = useState<PlaceLocation[]>([]);
   const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
   const [toggleSearchProgessBar, setToggleSearchProgessBar] = useState(false);
+  const [toggleAnalyzeProgressBar, setToggleAnalyzeProgressBar] =
+    useState(false);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+
+  useEffect(() => {
+    setClusters([]);
+  }, [placeLocations]);
 
   const handleSearch = async () => {
     try {
       setToggleSearchProgessBar(true);
-      console.log(
-        'placeNames: ',
-        placeNames,
-        ' searchCenter: ',
-        searchCenter,
-        ' searchRadius: ',
-        searchRadius
-      );
       const placesLocations = await axiosService.searchPlaces(
         placeNames,
         searchCenter,
@@ -54,10 +60,23 @@ const App: React.FC = () => {
       );
       setToggleSearchProgessBar(false);
       showAlert('success', 'Search completed successfully!');
-      console.log('placesLocations', placesLocations['places']);
       setPlaceLocations(placesLocations['places']);
     } catch (error) {
       showAlert('error', 'Search failed.');
+      setToggleSearchProgessBar(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    try {
+      setToggleAnalyzeProgressBar(true);
+      const clusterResults = await axiosService.analyzePlaces(placeLocations);
+      //console.log('Clusters: ', clusters);
+      setClusters(clusterResults);
+      setToggleAnalyzeProgressBar(false);
+    } catch (error) {
+      showAlert('error', 'Analyze failed.');
+      setToggleAnalyzeProgressBar(false);
     }
   };
 
@@ -102,6 +121,7 @@ const App: React.FC = () => {
               setSearchCenter={setSearchCenter}
               searchRadius={searchRadius}
               setSearchRadius={setSearchRadius}
+              clusters={clusters}
             />
           </APIProvider>
         </Container>
@@ -132,7 +152,12 @@ const App: React.FC = () => {
             borderRadius: '5px',
           }}
         >
-          <AnalyzeComponent />
+          <Box display='flex' flexDirection='column' gap={2}>
+            {toggleAnalyzeProgressBar && <LinearProgress color='warning' />}
+            <Button variant='contained' color='warning' onClick={handleAnalyze}>
+              Analyze
+            </Button>
+          </Box>
         </Container>
       </Box>
       {alert && (

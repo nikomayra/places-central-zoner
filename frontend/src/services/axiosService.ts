@@ -6,6 +6,12 @@ interface GeoLocation {
   lng: number;
 }
 
+interface PlaceLocation {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 const searchPlaces = async (
   placeNames: string[],
   searchCenter: GeoLocation,
@@ -24,7 +30,13 @@ const searchPlaces = async (
   return res.data;
 };
 
-//const setSearchArea =
-//const analyzePlaces =
+const analyzePlaces = async (placeLocations: PlaceLocation[]) => {
+  const res = await axios.post(`${baseUrl}/cluster`, placeLocations, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  return res.data;
+};
 
-export default { searchPlaces };
+export default { searchPlaces, analyzePlaces };
