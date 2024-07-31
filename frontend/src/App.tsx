@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Container, Box, Snackbar, Alert, Button } from '@mui/material';
+import {
+  Container,
+  Box,
+  Snackbar,
+  Alert,
+  Button,
+  LinearProgress,
+} from '@mui/material';
 import PlaceNamesInput from './components/PlaceNamesInput';
 import MapComponent from './components/MapComponent';
 import AnalyzeComponent from './components/AnalyzeComponent';
@@ -27,17 +34,28 @@ const App: React.FC = () => {
   const [searchRadius, setSearchRadius] = useState<number>(5); // Default 5 mile radius
   const [placeLocations, setPlaceLocations] = useState<PlaceLocation[]>([]);
   const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
+  const [toggleSearchProgessBar, setToggleSearchProgessBar] = useState(false);
 
   const handleSearch = async () => {
     try {
+      setToggleSearchProgessBar(true);
+      console.log(
+        'placeNames: ',
+        placeNames,
+        ' searchCenter: ',
+        searchCenter,
+        ' searchRadius: ',
+        searchRadius
+      );
       const placesLocations = await axiosService.searchPlaces(
         placeNames,
         searchCenter,
         searchRadius
       );
+      setToggleSearchProgessBar(false);
       showAlert('success', 'Search completed successfully!');
-      console.log('placesLocations', placesLocations);
-      //setPlaceLocations(placesLocations);
+      console.log('placesLocations', placesLocations['places']);
+      setPlaceLocations(placesLocations['places']);
     } catch (error) {
       showAlert('error', 'Search failed.');
     }
@@ -102,6 +120,7 @@ const App: React.FC = () => {
             setPlaceNames={setPlaceNames}
             showAlert={showAlert}
           />
+          {toggleSearchProgessBar && <LinearProgress color='primary' />}
           <Button variant='contained' color='primary' onClick={handleSearch}>
             Search
           </Button>

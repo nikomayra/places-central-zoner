@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Slider, Box, Tooltip, TextField } from '@mui/material';
 import { TrackChanges } from '@mui/icons-material';
 import {
@@ -40,6 +40,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const places = useMapsLibrary('places');
+  const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (!places || !inputRef.current) return;
@@ -125,12 +126,22 @@ const MapComponent: React.FC<MapComponentProps> = ({
     };
   }, [map]);
 
-  /* SANTIAGO, CHILE BOX
-    east: -33.6546303
-    north: -70.8298707
-    south: -70.8394937
-    west: -33.3328737
-   */
+  useEffect(() => {
+    const newPlaceColors: { [key: string]: string } = { ...placeColors };
+
+    placeLocations.forEach((loc) => {
+      if (!newPlaceColors[loc.name]) {
+        newPlaceColors[loc.name] = getRandomColor();
+      }
+    });
+
+    // Update placeColors only if there are new entries
+    if (
+      Object.keys(newPlaceColors).length !== Object.keys(placeColors).length
+    ) {
+      setPlaceColors(newPlaceColors);
+    }
+  }, [placeLocations, placeColors]);
 
   return (
     <Box display='flex' flexDirection='column' gap={2}>
@@ -187,21 +198,29 @@ const MapComponent: React.FC<MapComponentProps> = ({
       >
         {placeLocations.map((loc) => (
           <AdvancedMarker
+            key={loc.name + loc.lat + loc.lng}
             position={{ lat: loc.lat, lng: loc.lng }}
             title={loc.name}
-            clickable={true}
-            onClick={() => console.log('Marker Clicked!!')}
           >
             <Pin
-              background={'#22ccff'}
-              borderColor={'#1976d2'}
-              glyphColor={'#0f677a'}
+              background={placeColors[loc.name]}
+              borderColor={'#080808'}
+              glyphColor={'#000000'}
             ></Pin>
           </AdvancedMarker>
         ))}
       </Map>
     </Box>
   );
+};
+
+const getRandomColor = (): string => {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
 };
 
 export default MapComponent;

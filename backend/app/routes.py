@@ -1,7 +1,5 @@
 from flask import Blueprint, request, jsonify
-import requests
-import os
-import json
+import os, math, json, requests
 from sklearn.cluster import KMeans
 import numpy as np
 from itertools import combinations
@@ -14,45 +12,103 @@ GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
 def search():
     data = request.json
     # Example data structure: 
-    # placeNames: [{placeNames: {'LA Fitness', 'Chipotle', 'Starbucks'}}]
-    # search_center = [47.645163, -122.335534] # data['location']
-    # search_radius = 50
+    # data:  {'placeNames': ['starbucks', 'chipotle'], 
+    # 'searchCenter': {'lat': 47.608013, 'lng': -122.335167}, 
+    # 'searchRadius': 5}
 
-    # place_names = ['LA Fitness', 'chipotle', 'starbucks'] # data['stores']
-    print('data: ', data)
-    maxResultantCount = 10
-
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
     
-    #locations = get_places_data(place_name, search_center,search_radius, maxResultantCount)
-    # central_locations = get_central_locations(location_names, search_center, search_radius, maxResultantCount)
-    # TODO, return structured data of found locations - then in mark them in map component
-    # Make it so each different place name gets a diff color marker...
-    return jsonify({'message': 'done'})#jsonify(locations)
+    placeNames = data.get('placeNames', [])
+    searchCenter = data.get('searchCenter', {})
+    searchRadius = data.get('searchRadius', 0) * 1609.34 #miles to meters
+    maxPageResults = 15 #20 max...if you want more you use the nextPageToken for the next page results
 
-# Returns json of places: displayName.text, id, location.latitude & longitude
-def get_places_data(place_name, search_center, search_radius, maxResultantCount):
+    if not placeNames or not searchCenter or not searchRadius:
+        return jsonify({'error': 'Invalid data structure'}), 400
+    
+    results = []
+    for placeName in placeNames:
+        placeData = get_place_data(
+            placeName, 
+            (searchCenter['lat'], searchCenter['lng']), 
+            searchRadius, 
+            maxPageResults
+        )
+        if placeData:
+            for place in placeData.get('places', []):
+                placeLocation = {
+                    'name': place['displayName']['text'],
+                    'lat': place['location']['latitude'],
+                    'lng': place['location']['longitude']
+                }
+                results.append(placeLocation)
+    
+    response_data = {'places': results}
+    #print(jsonify(response_data))
+    return jsonify(response_data)
+
+def calculate_bounding_box(center, radius):
+    lat, lng = center
+    radius_in_km = radius * .001  # Convert meters to kilometers
+
+    # Earth’s radius in kilometers
+    earth_radius = 6371.0
+
+    # Latitude delta
+    lat_delta = radius_in_km / earth_radius
+    lat_delta_deg = math.degrees(lat_delta) * .9 #10% smaller to closer match the circle
+
+    # Longitude delta, compensate for shrinking earth radius in latitude
+    lng_delta_deg = math.degrees(radius_in_km / (earth_radius * math.cos(math.radians(lat))))
+
+    # Define the bounding box
+    northeast = (min(lat + lat_delta_deg, 90), min(lng + lng_delta_deg, 180))
+    southwest = (max(lat - lat_delta_deg, -90), max(lng - lng_delta_deg, -180))
+
+    return northeast, southwest
+
+# Returns json of places: displayName.text, location.latitude & longitude
+def get_place_data(placeName, searchCenter, searchRadius, maxPageResults):
+    northeast, southwest = calculate_bounding_box(searchCenter, searchRadius)
     url = 'https://places.googleapis.com/v1/places:searchText'
-    data = {'textQuery': place_name,
-                  'locationBias':{
-                      "circle":{
-                          "center":{
-                              "latitude":search_center[0],
-                              "longitude":search_center[1]
-                              },
-                              "radius":search_radius}},
-                  'maxResultCount': maxResultantCount}
+    data = {
+            'textQuery': placeName,
+            'locationRestriction':{
+                "rectangle": {
+                    "low": {
+                        "latitude": southwest[0],
+                        "longitude": southwest[1]
+                    },
+                    "high": {
+                        "latitude": northeast[0],
+                        "longitude": northeast[1]
+                    }
+                }
+            },
+            'pageSize': maxPageResults
+            }
     headers = {'Content-Type': 'application/json',
                 'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
                 'X-Goog-FieldMask': 'places.displayName,places.location'}
 
     json_data = json.dumps(data)
+    #print(json_data)
 
-    response = requests.post(url, data=json_data, headers=headers)
-
-    if response.status_code == 200:
+    try:
+        response = requests.post(url, data=json_data, headers=headers)
+        response.raise_for_status()  # Raise an error for bad status codes
         data = response.json()
         return data
-    return response.raise_for_status() # Replace with soft failure.
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except requests.exceptions.ConnectionError as conn_err:
+        print(f"Connection error occurred: {conn_err}")
+    except requests.exceptions.Timeout as timeout_err:
+        print(f"Timeout error occurred: {timeout_err}")
+    except requests.exceptions.RequestException as req_err:
+        print(f"An error occurred: {req_err}")
+    return None  # Return None in case of any error
 
 # Initial clustering using KMeans
 def initial_clustering(coords, max_clusters):
