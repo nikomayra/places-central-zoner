@@ -3,11 +3,12 @@ import { Slider, Box, Tooltip, TextField } from '@mui/material';
 import { TrackChanges } from '@mui/icons-material';
 import {
   Map,
+  useMap,
   AdvancedMarker,
   Pin,
-  useMap,
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
+import clusterIcon from '../assets/icons8-hollow-red-circle-48.png';
 
 type PlaceLocation = {
   name: string;
@@ -51,23 +52,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const places = useMapsLibrary('places');
   const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
 
-  // Utility function to convert HSL color to HSLA with a given alpha
-  const getColorWithAlpha = (color: string, alpha: number): string => {
-    if (!color) return `hsla(0, 0%, 0%, ${alpha})`; // Default to black if color is undefined
-    return color.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
+  const getLighterColor = (color: string, lightness: number): string => {
+    if (!color) return `hsl(0, 0%, 0%)`; // Default to black if color is undefined
+    const hslColor = `hsl(${color.slice(4, -6)}, ${lightness}%)`;
+    //console.log('hslColor: ', hslColor);
+    return hslColor;
   };
-
-  const renderClusterPin = () => (
-    <svg
-      width='24'
-      height='24'
-      viewBox='0 0 24 24'
-      fill='none'
-      xmlns='http://www.w3.org/2000/svg'
-    >
-      <circle cx='12' cy='12' r='10' fill='red' />
-    </svg>
-  );
 
   const getRandomColor = (() => {
     let lastHue = Math.random() * 360;
@@ -200,16 +190,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
           gap={1}
           style={{ flexGrow: 1, alignItems: 'center' }}
         >
-          <Tooltip title='Search Radius (miles)'>
+          <Tooltip title='Search Area Bias (miles)'>
             <TrackChanges style={{ flexGrow: 0 }} />
           </Tooltip>
           <Slider
-            aria-label='Search Radius'
+            aria-label='Search Area'
             value={searchRadius}
             onChange={(_, value) => setSearchRadius(value as number)}
             valueLabelDisplay='auto'
-            shiftStep={5}
-            step={2}
+            shiftStep={1}
+            step={1}
             marks={false}
             min={1}
             max={26}
@@ -223,14 +213,14 @@ const MapComponent: React.FC<MapComponentProps> = ({
           width: '100%',
           aspectRatio: '1/1',
         }}
-        //defaultCenter={{ lat: 47.608013, lng: -122.335167 }}
-        //center={{lat: searchCenter.lat, lng: searchCenter.lon }}
         defaultBounds={{
           east: -33.6546303,
           north: -70.8298707,
           south: -70.8394937,
           west: -33.3328737,
         }}
+        //center={searchCenter}
+        //defaultZoom={10}
         gestureHandling={'greedy'}
         disableDefaultUI={true}
         zoomControl={false}
@@ -242,12 +232,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
           <AdvancedMarker
             key={loc.name + loc.lat + loc.lng}
             position={{ lat: loc.lat, lng: loc.lng }}
-            title={loc.name}
+            title={loc.name + ':\n\n lat: ' + loc.lat + ' lng: ' + loc.lng}
           >
             <Pin
-              background={getColorWithAlpha(
-                placeColors[loc.name] || 'hsl(0, 0%, 0%)',
-                clusters.length > 0 ? 0.3 : 1
+              background={getLighterColor(
+                placeColors[loc.name],
+                clusters.length > 0 ? 80 : 50
               )}
               borderColor={'#080808'}
               glyphColor={'#080808'}
@@ -259,9 +249,19 @@ const MapComponent: React.FC<MapComponentProps> = ({
           <AdvancedMarker
             key={`cluster-${index}`}
             position={{ lat: cluster.center.lat, lng: cluster.center.lng }}
-            title={`Cluster center: ${cluster.center.lat}, ${cluster.center.lng}`}
+            title={`Cluster rank: ${
+              index + 1
+            },  Score: ${cluster.wcss.toPrecision(5)}`}
           >
-            {renderClusterPin()}
+            <img
+              src={clusterIcon}
+              style={{
+                height: '30px',
+                width: '30px',
+                WebkitFilter: 'drop-shadow(1px 1px)',
+                filter: 'drop-shadow(1px 1px)',
+              }}
+            />
           </AdvancedMarker>
         ))}
       </Map>

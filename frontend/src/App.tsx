@@ -20,13 +20,13 @@ interface PlaceLocation {
   lng: number;
 }
 
-interface GeoLocation {
+interface LatLng {
   lat: number;
   lng: number;
 }
 
 interface Cluster {
-  center: GeoLocation;
+  center: LatLng;
   cluster: number;
   places: PlaceLocation[];
   wcss: number;
@@ -34,14 +34,12 @@ interface Cluster {
 
 const App: React.FC = () => {
   const { alert, showAlert, hideAlert } = useAlert();
-  const [searchCenter, setSearchCenter] = useState<GeoLocation>({
+  const [searchCenter, setSearchCenter] = useState<LatLng>({
     lat: 47.608013,
     lng: -122.335167,
   });
   const [searchRadius, setSearchRadius] = useState<number>(5); // Default 5 mile radius
   const [placeLocations, setPlaceLocations] = useState<PlaceLocation[]>([]);
-  const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
-  const [toggleSearchProgessBar, setToggleSearchProgessBar] = useState(false);
   const [toggleAnalyzeProgressBar, setToggleAnalyzeProgressBar] =
     useState(false);
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -50,28 +48,11 @@ const App: React.FC = () => {
     setClusters([]);
   }, [placeLocations]);
 
-  const handleSearch = async () => {
-    try {
-      setToggleSearchProgessBar(true);
-      const placesLocations = await axiosService.searchPlaces(
-        placeNames,
-        searchCenter,
-        searchRadius
-      );
-      setToggleSearchProgessBar(false);
-      showAlert('success', 'Search completed successfully!');
-      setPlaceLocations(placesLocations['places']);
-    } catch (error) {
-      showAlert('error', 'Search failed.');
-      setToggleSearchProgessBar(false);
-    }
-  };
-
   const handleAnalyze = async () => {
     try {
       setToggleAnalyzeProgressBar(true);
       const clusterResults = await axiosService.analyzePlaces(placeLocations);
-      //console.log('Clusters: ', clusters);
+      console.log('Clusters: ', clusterResults);
       setClusters(clusterResults);
       setToggleAnalyzeProgressBar(false);
     } catch (error) {
@@ -123,28 +104,17 @@ const App: React.FC = () => {
               setSearchRadius={setSearchRadius}
               clusters={clusters}
             />
+            <br />
+            <Box display='flex' flexDirection='column' gap={2}>
+              <PlaceNamesInput
+                setPlaceLocations={setPlaceLocations}
+                searchCenter={searchCenter}
+                searchRadius={searchRadius}
+                showAlert={showAlert}
+              />
+            </Box>
           </APIProvider>
         </Container>
-        <Box
-          display='flex'
-          flexDirection='column'
-          gap={2}
-          sx={{
-            border: '3px solid grey',
-            padding: '15px',
-            borderRadius: '5px',
-          }}
-        >
-          <PlaceNamesInput
-            placeNames={placeNames}
-            setPlaceNames={setPlaceNames}
-            showAlert={showAlert}
-          />
-          {toggleSearchProgessBar && <LinearProgress color='primary' />}
-          <Button variant='contained' color='primary' onClick={handleSearch}>
-            Search
-          </Button>
-        </Box>
         <Container
           sx={{
             border: '3px solid grey',
