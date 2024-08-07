@@ -5,10 +5,9 @@ import {
   Map,
   useMap,
   AdvancedMarker,
-  Pin,
+  //Pin,
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
-import clusterIcon from '../assets/icons8-hollow-red-circle-48.png';
 
 type PlaceLocation = {
   name: string;
@@ -26,6 +25,7 @@ interface Cluster {
   cluster: number;
   places: PlaceLocation[];
   wcss: number;
+  radius: number;
 }
 
 interface MapComponentProps {
@@ -51,6 +51,19 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const places = useMapsLibrary('places');
   const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
+  const circlesRef = useRef<google.maps.Circle[]>([]);
+
+  const predefinedColors = [
+    'hsl(0, 80%, 50%)', // Red
+    'hsl(30, 80%, 50%)', // Orange
+    'hsl(60, 80%, 50%)', // Yellow
+    'hsl(120, 80%, 50%)', // Green
+    'hsl(180, 80%, 50%)', // Cyan
+    'hsl(240, 80%, 50%)', // Blue
+    'hsl(300, 80%, 50%)', // Purple
+    //'hsl(360, 70%, 50%)', // Red again to show it's a loop
+    // Add more colors if needed
+  ];
 
   const getLighterColor = (color: string, lightness: number): string => {
     if (!color) return `hsl(0, 0%, 0%)`; // Default to black if color is undefined
@@ -60,15 +73,24 @@ const MapComponent: React.FC<MapComponentProps> = ({
   };
 
   const getRandomColor = (() => {
-    let lastHue = Math.random() * 360;
+    // Shuffle function to randomize colors
+    const shuffleArray = (array: string[]): string[] => {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    };
+
+    let shuffledColors = shuffleArray([...predefinedColors]);
+    let index = 0;
 
     return (): string => {
-      const hueDifference = 137; // Using a golden angle to get distinct hues
-      lastHue = (lastHue + hueDifference) % 360;
-      const saturation = 70; // Keep saturation constant
-      const lightness = 50; // Keep lightness constant
-
-      return `hsl(${lastHue}, ${saturation}%, ${lightness}%)`;
+      if (index >= shuffledColors.length) {
+        shuffledColors = shuffleArray([...predefinedColors]);
+        index = 0;
+      }
+      return shuffledColors[index++];
     };
   })();
 
@@ -110,8 +132,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
       const circle = new google.maps.Circle({
         map,
         fillOpacity: 0,
-        strokeOpacity: 0.5,
-        strokeColor: '#000000',
+        strokeOpacity: 0.6,
+        strokeColor: '#ffffff',
         center: { lat: searchCenter.lat, lng: searchCenter.lng },
         radius: searchRadius * 1609.34,
       });
@@ -175,6 +197,37 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   }, [placeLocations, placeColors, getRandomColor]);
 
+  useEffect(() => {
+    if (!map) return;
+
+    // Clear existing circles
+    circlesRef.current.forEach((circle) => circle.setMap(null));
+    circlesRef.current = [];
+
+    // Add new circles
+    clusters.forEach((cluster) => {
+      const circle = new google.maps.Circle({
+        map,
+        fillOpacity: 0.2,
+        fillColor: '#f50057',
+        strokeOpacity: 1,
+        strokeColor: '#f50057',
+        strokeWeight: 3,
+        center: { lat: cluster.center.lat, lng: cluster.center.lng },
+        radius: cluster.radius,
+        zIndex: 1000,
+      });
+
+      circlesRef.current.push(circle);
+    });
+
+    // Cleanup function to remove circles when the component unmounts
+    return () => {
+      circlesRef.current.forEach((circle) => circle.setMap(null));
+      circlesRef.current = [];
+    };
+  }, [map, clusters]);
+
   return (
     <Box display='flex' flexDirection='column' gap={2}>
       <Box display='flex' flexDirection='row' gap={2}>
@@ -227,14 +280,30 @@ const MapComponent: React.FC<MapComponentProps> = ({
         streetViewControl={false}
         fullscreenControl={false}
         mapTypeControl={false}
+        mapTypeId={'hybrid'}
       >
         {placeLocations.map((loc) => (
           <AdvancedMarker
             key={loc.name + loc.lat + loc.lng}
             position={{ lat: loc.lat, lng: loc.lng }}
             title={loc.name + ':\n\n lat: ' + loc.lat + ' lng: ' + loc.lng}
+            zIndex={1}
           >
-            <Pin
+            <div
+              style={{
+                width: '15px',
+                height: '15px',
+                borderRadius: '50%',
+                backgroundColor: placeColors[loc.name],
+                border: `2px solid ${getLighterColor(
+                  placeColors[loc.name],
+                  20
+                )}`,
+                opacity: clusters.length > 0 ? 0.6 : 1,
+                zIndex: '1',
+              }}
+            />
+            {/* <Pin
               background={getLighterColor(
                 placeColors[loc.name],
                 clusters.length > 0 ? 80 : 50
@@ -242,26 +311,28 @@ const MapComponent: React.FC<MapComponentProps> = ({
               borderColor={'#080808'}
               glyphColor={'#080808'}
               scale={0.7}
-            ></Pin>
+            ></Pin> */}
           </AdvancedMarker>
         ))}
         {clusters.map((cluster, index) => (
           <AdvancedMarker
-            key={`cluster-${index}`}
+            key={`Zone - ${index}`}
             position={{ lat: cluster.center.lat, lng: cluster.center.lng }}
-            title={`Cluster rank: ${
-              index + 1
-            },  Score: ${cluster.wcss.toPrecision(5)}`}
+            zIndex={1000}
+            //style={{ transform: 'translate(-50%, -100%)' }}
           >
-            <img
-              src={clusterIcon}
-              style={{
-                height: '30px',
-                width: '30px',
-                WebkitFilter: 'drop-shadow(1px 1px)',
-                filter: 'drop-shadow(1px 1px)',
-              }}
-            />
+            <svg
+              viewBox='0 0 100 100'
+              xmlns='http://www.w3.org/2000/svg'
+              style={{ width: '15px', height: '15px' }}
+            >
+              <polygon
+                points='50,10 90,50 50,90 10,50'
+                fill='#f50057'
+                stroke='#080808'
+                strokeWidth='2'
+              />
+            </svg>
           </AdvancedMarker>
         ))}
       </Map>

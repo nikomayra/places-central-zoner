@@ -6,6 +6,10 @@ import {
   Alert,
   Button,
   LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import PlaceNamesInput from './components/PlaceNamesInput';
 import MapComponent from './components/MapComponent';
@@ -13,6 +17,7 @@ import MapComponent from './components/MapComponent';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import useAlert from './hooks/useAlert';
 import axiosService from './services/axiosService';
+import { FixedSizeList, ListChildComponentProps } from 'react-window';
 
 interface PlaceLocation {
   name: string;
@@ -30,6 +35,7 @@ interface Cluster {
   cluster: number;
   places: PlaceLocation[];
   wcss: number;
+  radius: number;
 }
 
 const App: React.FC = () => {
@@ -43,22 +49,53 @@ const App: React.FC = () => {
   const [toggleAnalyzeProgressBar, setToggleAnalyzeProgressBar] =
     useState(false);
   const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [preference, setPreference] = useState<number>(0);
 
   useEffect(() => {
     setClusters([]);
   }, [placeLocations]);
 
+  const handlePreference = (
+    _event: React.MouseEvent<HTMLElement>,
+    newPreference: number | null
+  ) => {
+    if (newPreference !== null) {
+      setPreference(newPreference);
+    }
+  };
+
   const handleAnalyze = async () => {
     try {
       setToggleAnalyzeProgressBar(true);
-      const clusterResults = await axiosService.analyzePlaces(placeLocations);
-      console.log('Clusters: ', clusterResults);
+      const clusterResults = await axiosService.analyzePlaces(
+        placeLocations,
+        preference
+      );
+      //console.log('Clusters: ', clusterResults);
       setClusters(clusterResults);
       setToggleAnalyzeProgressBar(false);
     } catch (error) {
       showAlert('error', 'Analyze failed.');
       setToggleAnalyzeProgressBar(false);
     }
+  };
+
+  const clusterList = (props: ListChildComponentProps) => {
+    const { index, style } = props;
+
+    return (
+      <ListItem style={style} key={index} component='div' disablePadding>
+        <ListItemText
+          key={`Clusters - ${index}`}
+          primary={`Central Zone ${index + 1}`}
+          secondary={`Radius (mi.): ${(
+            clusters[index].radius / 1609.34
+          ).toPrecision(3)}, WCSS Score: ${clusters[index].wcss.toPrecision(
+            3
+          )}`}
+        />
+      </ListItem>
+    );
   };
 
   return (
@@ -122,8 +159,61 @@ const App: React.FC = () => {
             borderRadius: '5px',
           }}
         >
-          <Box display='flex' flexDirection='column' gap={2}>
+          <Box display='flex' flexDirection='column' gap={1}>
+            {Object.entries(clusters).length > 0 && (
+                <span style={{ fontWeight: 'bold' }}>Analysis Results:</span>
+              ) && (
+                <FixedSizeList
+                  height={150}
+                  width={'100%'}
+                  itemSize={46}
+                  itemCount={clusters.length}
+                  overscanCount={5}
+                  style={{ border: '1px solid grey', borderRadius: '5px' }}
+                >
+                  {clusterList}
+                </FixedSizeList>
+              )}
             {toggleAnalyzeProgressBar && <LinearProgress color='warning' />}
+            <h4 style={{ margin: '0', textAlign: 'center' }}>
+              Quality Preference
+            </h4>
+            <p
+              style={{
+                margin: '0',
+                textAlign: 'center',
+                fontStyle: 'italic',
+                fontSize: 'small',
+              }}
+            >
+              More quality = less quantity and visa-versa
+            </p>
+            <ToggleButtonGroup
+              value={preference}
+              exclusive
+              onChange={handlePreference}
+              aria-label='user preference'
+              color='warning'
+              size='small'
+              sx={{ justifyContent: 'center' }}
+              fullWidth={true}
+            >
+              <ToggleButton value={-2} aria-label='-2'>
+                <h3 style={{ margin: '0' }}>--</h3>
+              </ToggleButton>
+              <ToggleButton value={-1} aria-label='-1'>
+                <h3 style={{ margin: '0' }}>-</h3>
+              </ToggleButton>
+              <ToggleButton value={0} aria-label='0'>
+                <h3 style={{ margin: '0' }}>o</h3>
+              </ToggleButton>
+              <ToggleButton value={1} aria-label='1'>
+                <h3 style={{ margin: '0' }}>+</h3>
+              </ToggleButton>
+              <ToggleButton value={2} aria-label='2'>
+                <h3 style={{ margin: '0' }}>++</h3>
+              </ToggleButton>
+            </ToggleButtonGroup>
             <Button variant='contained' color='warning' onClick={handleAnalyze}>
               Analyze
             </Button>

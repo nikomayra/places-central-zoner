@@ -2,7 +2,7 @@
 
 ### Description:
 
-Locations Zoner is a simple web application that finds central locations which each contain all searched locations within a minimized radius. For example, search for LA Fitness, Chipotle and Starbucks within the greater Seattle area and it will draw circles with a center point which is at a minimum distance to clusters of those three stores. TBD
+Places Central Zoner is a simple web application that finds central locations which each contain all searched locations within a minimized radius. For example, search for LA Fitness, Chipotle and Starbucks within the greater Seattle area and it will draw circles with a center point which is at a minimum distance to clusters of those three stores. TBD
 
 # Development plan:
 
@@ -16,25 +16,27 @@ Locations Zoner is a simple web application that finds central locations which e
 
 ## Implementation Steps:
 
-1. (80%) Frontend Development:
+1. (95%) Frontend Development:
 
    - Set up a React project with TypeScript.
    - Integrate Material-UI.
    - Implement input fields for places names and a map component using Google Maps API.
-     -Implement map search area refinement. Limit max search area and allow user to search to quickly center map. Maybe autocomplete library or other.
+   - Implement map search area refinement.
+   - Implement UI/UX elements for visibility, readability, useability.
+   - Implement data UI elements for greater understanding of results.
 
-2. (20%) Backend Development:
+2. (70%) Backend Development:
 
    - Set up a Flask project.
-   - Create endpoints to interact with the Google Places API and Distance Matrix API.
    - Implement logic to calculate the central minimum locations based on store distances.
-     -Setup PostgreSQL for storing/handling backend data.
+     - Using a dynamic count based system. Brute-force, DBScan, and KMeans.
+   - Setup PostgreSQL for storing/handling data.
 
-3. Mapping and Geolocation:
+3. () Mapping and Geolocation:
 
-   - Use the Google Maps API to display the map and markers for the places.
+   - Use the Google Maps API to display the map and markers for the places/central-zones.
    - Calculate the central points and draw circles representing the radius to the farthest store.
-     -Use Google Maps API for drawing central zones
+   - Use Google Maps API for drawing central zone markers
 
 4. Implement OAuth and any other protection to avoid unnecessary Google API calls.
 

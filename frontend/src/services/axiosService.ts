@@ -30,10 +30,14 @@ const searchPlaces = async (
   return res.data;
 };
 
-const analyzePlaces = async (placeLocations: PlaceLocation[]) => {
+const analyzePlaces = async (
+  placeLocations: PlaceLocation[],
+  userPreference: number
+) => {
   const res = await axios.post(`${baseUrl}/cluster`, placeLocations, {
     headers: {
       'Content-Type': 'application/json',
+      'User-Preference': userPreference,
     },
   });
   return res.data;

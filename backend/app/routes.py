@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import os, math, json, requests
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 import numpy as np
 from itertools import combinations
 from collections import OrderedDict
@@ -113,18 +113,32 @@ GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
 
 # ---------------------------------------------------------------------------------
 
+# Helper function to calculate the Haversine distance between two points
+def haversine_distance(coord1, coord2):
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+    R = 6371000  # Radius of the Earth in meters
+    phi1, phi2 = np.radians(lat1), np.radians(lat2)
+    delta_phi = np.radians(lat2 - lat1)
+    delta_lambda = np.radians(lon2 - lon1)
+
+    a = np.sin(delta_phi / 2) ** 2 + np.cos(phi1) * np.cos(phi2) * np.sin(delta_lambda / 2) ** 2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+    return R * c
+
 # Initial clustering using KMeans
 def initial_clustering(coords, max_clusters):
     kmeans = KMeans(n_clusters=max_clusters, random_state=0).fit(coords)
-    return kmeans.labels_, kmeans.cluster_centers_
+    return kmeans.labels_
 
 # Refine clusters to ensure each cluster contains at least one of each place type
-def refine_clusters(labels, coords, place_names, place_types):
+def refine_clusters(labels, places, place_types):
     clusters = {i: [] for i in range(max(labels) + 1)}
 
     # Organize points into clusters
-    for label, name, loc in zip(labels, place_names, coords):
-        clusters[label].append({'name': name, 'lat': loc[0], 'lng': loc[1]})
+    for label, place in zip(labels, places):
+        clusters[label].append(place)
 
     refined_clusters = []
     for combo in combinations(clusters.keys(), len(place_types)):
@@ -142,12 +156,19 @@ def refine_clusters(labels, coords, place_names, place_types):
 
     return refined_clusters
 
-# Calculate the within-cluster sum of squares (WCSS) and the centroid for a cluster
-def calculate_wcss(cluster_points):
+# Calculate the within-cluster sum of squares (WCSS), center, radius
+def calculate_wcss_center_radius(cluster_points):
     coords = np.array([[p['lat'], p['lng']] for p in cluster_points])
     centroid = np.mean(coords, axis=0)
     wcss = np.sum((coords - centroid) ** 2)
-    return wcss, {'lat': centroid[0], 'lng': centroid[1]}
+
+    # Calculate the radius of the circle that encompasses the points
+    max_distance = max(
+        haversine_distance((centroid[0], centroid[1]), (p['lat'], p['lng']))
+        for p in cluster_points
+    )
+
+    return wcss, {'lat': centroid[0], 'lng': centroid[1]}, max_distance
 
 # Dynamically determine the maximum number of clusters
 def dynamic_max_clusters(total_points, place_types):
@@ -160,13 +181,13 @@ def dynamic_max_clusters(total_points, place_types):
     return max_clusters
 
 # Iteratively refine clusters to minimize WCSS
-def iterative_refinement(labels, coords, place_names, place_types, max_iters=100):
-    best_clusters = refine_clusters(labels, coords, place_names, place_types)
-    best_wcss = sum(calculate_wcss(cluster)[0] for cluster in best_clusters)
+def iterative_refinement(labels, places, place_types, max_iters=100):
+    best_clusters = refine_clusters(labels, places, place_types)
+    best_wcss = sum(calculate_wcss_center_radius(cluster)[0] for cluster in best_clusters)
 
     for _ in range(max_iters):
-        new_clusters = refine_clusters(labels, coords, place_names, place_types)
-        new_wcss = sum(calculate_wcss(cluster)[0] for cluster in new_clusters)
+        new_clusters = refine_clusters(labels, places, place_types)
+        new_wcss = sum(calculate_wcss_center_radius(cluster)[0] for cluster in new_clusters)
 
         if new_wcss < best_wcss:
             best_wcss = new_wcss
@@ -176,9 +197,87 @@ def iterative_refinement(labels, coords, place_names, place_types, max_iters=100
 
     return best_clusters
 
+# Brute-force method for very small datasets
+def brute_force_clustering(coords, places, place_types):
+    clusters = []
+    for combo in combinations(range(len(coords)), len(place_types)):
+        cluster = [places[i] for i in combo]
+        types = {place['name'] for place in cluster}
+        if len(types) == len(place_types):
+            clusters.append(cluster)
+    return clusters
+
+# Hierarchical clustering or DBSCAN for small datasets
+def small_dataset_clustering(coords, places, place_types):
+    db = DBSCAN(eps=0.05, min_samples=1).fit(coords)
+    labels = db.labels_
+    
+    clusters = {i: [] for i in range(max(labels) + 1)}
+    for label, info in zip(labels, places):
+        clusters[label].append(info)
+    
+    refined_clusters = []
+    for combo in combinations(clusters.keys(), len(place_types)):
+        combined_cluster = []
+        type_counts = {place_type: 0 for place_type in place_types}
+        
+        for label in combo:
+            for point in clusters[label]:
+                if type_counts[point['name']] < 1:
+                    combined_cluster.append(point)
+                    type_counts[point['name']] += 1
+        
+        if all(count >= 1 for count in type_counts.values()):
+            refined_clusters.append(combined_cluster)
+    
+    return refined_clusters
+
+# Function to evaluate clusters based on wcss
+def evaluate_clusters(clusters, preference):
+    valid_clusters = []
+    total_wcss = 0
+    count_valid = 0
+    wcss_threshold = .0005 - (.0001 * preference)
+    print('wcss_threshold',wcss_threshold)
+
+    # Helper function to create a unique identifier for a cluster based on its points
+    def create_cluster_identifier(cluster):
+        return frozenset((p['lat'], p['lng']) for p in cluster)
+
+    # Remove duplicate clusters
+    unique_clusters = list({
+        create_cluster_identifier(cluster): cluster for cluster in clusters
+    }.values())
+
+    for i, cluster in enumerate(unique_clusters):
+        wcss, center, radius = calculate_wcss_center_radius(cluster)
+        if wcss < wcss_threshold:
+            valid_clusters.append({
+                'cluster': i,
+                'places': cluster,
+                'wcss': wcss,
+                'center': center,
+                'radius': radius
+            })
+            total_wcss += wcss
+            count_valid += 1
+
+    valid_clusters.sort(key=lambda x: x['wcss']) #sort in ascending order by wcss
+
+    avg_wcss = total_wcss / count_valid if count_valid > 0 else float('inf')
+
+    # Calculate combined metric
+    if avg_wcss == float('inf'):
+        combined_metric =  count_valid
+    else:
+        combined_metric = (count_valid / avg_wcss)
+
+    return valid_clusters, combined_metric
+
 @bp.route('/cluster', methods=['POST'])
 def cluster_points():
     places = request.json
+    user_preference = int(request.headers.get('User-Preference'))
     # [
     #     {
     #         "lat": 47.662302,
@@ -187,46 +286,49 @@ def cluster_points():
     #     },
     #     ...
     # ]
-    #print('places: ', places)
-    
+    # print('user_preference',user_preference)
+    # print('user_preference - type',type(user_preference))
     # Extract place names and locations
     place_names = [place['name'] for place in places]
-    #print('place_names: ', place_names)
     place_locations = np.array([[place['lat'], place['lng']] for place in places])
-    #print('place_locations: ', place_locations)
     place_types = set(place_names)  # Collect unique place names
     print('place_types: ', place_types)
     total_points = len(places)
     print('total_places: ', total_points)
     max_clusters = dynamic_max_clusters(total_points, place_types)
     print('max_clusters: ', max_clusters)
-    # Initial clustering
-    initial_labels, _ = initial_clustering(place_locations, max_clusters)
-    # print('initial_labels: ', initial_labels)
-    # Iterative refinement to optimize clusters
-    refined_clusters = iterative_refinement(initial_labels, place_locations, place_names, place_types)
 
-    # Calculate WCSS, centroids, and prepare cluster scores
-    cluster_scores = []
-    for i, cluster in enumerate(refined_clusters):
-        wcss, center = calculate_wcss(cluster)
-        cluster_scores.append({
-            'cluster': i,
-            'places': cluster,
-            'wcss': wcss,
-            'center': center
-        })
+    best_method = None
+    best_clusters = None
+    best_score = float('-inf')
+
+    # Apply brute-force if feasible
+    if total_points <= 10 and len(place_types) <= 3:
+        # Use brute-force clustering for very small datasets
+        brute_force_clusters = brute_force_clustering(place_locations, places, place_types)
+        BF_valid_clusters, BF_Score = evaluate_clusters(brute_force_clusters, user_preference)
+        if BF_Score > best_score:
+            best_method = 'Brute Force'
+            best_clusters = BF_valid_clusters
+            best_score = BF_Score
     
-    # top 5, or all of them if less than 5 total
-    bestClustersCount = min(5, len(cluster_scores))
+    # Apply DBSCAN
+    dbscan_clusters = small_dataset_clustering(place_locations, places, place_types)
+    DB_valid_clusters, DB_score = evaluate_clusters(dbscan_clusters, user_preference)
+    if DB_score > best_score:
+        best_method = 'DBScan'
+        best_clusters = DB_valid_clusters
+        best_score = DB_score
 
-    # Remove duplicates
-    uniqClusters = list({(cluster['wcss'], cluster['center']['lat'], cluster['center']['lng']): cluster for cluster in cluster_scores}.values())
+    # Apply KMeans and iterative refinement
+    initial_labels = initial_clustering(place_locations, max_clusters)
+    kmeans_clusters = iterative_refinement(initial_labels, places, place_types)
+    KM_valid_clusters, KM_score = evaluate_clusters(kmeans_clusters, user_preference)
+    if KM_score > best_score:
+        best_method = 'KMeans'
+        best_clusters = KM_valid_clusters
+        best_score = KM_score
 
-    # Sort clusters by WCSS
-    uniqClusters.sort(key=lambda x: x['wcss'])
-
-    # Get the top 10% clusters
-    bestClusters = uniqClusters[:bestClustersCount]
-
-    return jsonify(bestClusters)
+    print('Method:', best_method)
+    # Return best clusters & method used.
+    return jsonify(best_clusters)

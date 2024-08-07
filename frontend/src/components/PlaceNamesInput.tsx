@@ -5,6 +5,9 @@ import {
   Box,
   IconButton,
   LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
@@ -38,7 +41,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 }) => {
   const [toggleSearchProgessBar, setToggleSearchProgessBar] = useState(false);
   const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
-  //const map = useMap();
+  const [nameCount, setNameCount] = useState<{ [key: string]: number }>({});
   const placesAPI = useMapsLibrary('places');
   const maxResults: number = 20; // 1-20
 
@@ -77,8 +80,35 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     }
   };
 
+  const verifyPlaceNames = (): boolean => {
+    // make sure place names input aren't too similar
+    // Trying to avoid case of: Chipotle & Chipotles
+    // It would simplify to chipotle and analyze would fail, needs minimum 2 places
+    let likeScore: number = 0;
+    for (let i = 0; i < placeNames.length; i++) {
+      for (let j = i + 1; j < placeNames.length; j++) {
+        likeScore = levenshtein(
+          placeNames[i].toLowerCase(),
+          placeNames[j].toLowerCase()
+        );
+        //console.log(`${placeNames[i]}+${placeNames[j]}=${likeScore}`);
+        if (likeScore <= 2) {
+          // guessing at a threshold...
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   const handleSearch = async () => {
     try {
+      //Try to prevent very similar names prior to API calls.
+      if (!verifyPlaceNames()) {
+        showAlert('error', 'Very similar names not allowed.');
+        return;
+      }
+
       setToggleSearchProgessBar(true);
       setPlaceLocations([]);
       const placeLocations: PlaceLocation[] = [];
@@ -88,8 +118,9 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         const pResults = await placesRequest(placeName);
 
         // Score how well the result names match the searched name
-        // Helps refine cases like CVS Photo or Walgreens Pharmacy,
-        // where we only want CVS and Walgreens
+        // Find the best scoring result name vs searched name
+        // Use that score to filter out all other results
+        // Try to provide user with what they intended.
         for (const place of pResults) {
           likeScore.push(
             levenshtein(place.name.toLowerCase(), placeName.toLowerCase())
@@ -103,16 +134,46 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         likeScore = [];
       }
 
-      nameCount(placeLocations);
+      // Remove duplicate - final search refinement
+      // where verifyPlaceNames() still return the same location from API call,
+      // like starbucks and strbock (theoretical example, not sure what API returns)
+      const uniquePlaceLocations: PlaceLocation[] =
+        removeDuplicatePlaces(placeLocations);
+
+      // If after all refinement we ended up with less than 2 places error out..
+      const placeCount: { [key: string]: number } =
+        calculateNameCount(uniquePlaceLocations);
+      //console.log('placeCount.length: ', Object.entries(placeCount).length);
+      if (Object.entries(placeCount).length < 2) {
+        showAlert('error', 'Fail: Less than 2 places found.');
+        setToggleSearchProgessBar(false);
+        return;
+      }
 
       setToggleSearchProgessBar(false);
       showAlert('success', 'Search completed successfully!');
-      setPlaceLocations(placeLocations);
+      setPlaceLocations(uniquePlaceLocations);
+      setNameCount(placeCount);
     } catch (error) {
       console.error('Error during search:', error);
       showAlert('error', 'Search failed.');
       setToggleSearchProgessBar(false);
     }
+  };
+
+  const removeDuplicatePlaces = (places: PlaceLocation[]): PlaceLocation[] => {
+    const uniquePlaces: PlaceLocation[] = [];
+    const seenLocations = new Set<string>();
+
+    places.forEach((place) => {
+      const key = `${place.lat},${place.lng}`;
+      if (!seenLocations.has(key)) {
+        seenLocations.add(key);
+        uniquePlaces.push(place);
+      }
+    });
+
+    return uniquePlaces;
   };
 
   // Finds square box around circle for locationRestriction definition
@@ -152,17 +213,20 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     );
   };
 
-  const nameCount = (places: PlaceLocation[]) => {
+  const calculateNameCount = (
+    places: PlaceLocation[]
+  ): { [key: string]: number } => {
     // Count occurrences of each place name
     const nameCount: { [key: string]: number } = {};
     places.forEach((place) => {
-      const name = place.name.toLowerCase();
+      const name = place.name;
       if (!nameCount[name]) {
         nameCount[name] = 0;
       }
       nameCount[name]++;
     });
-    console.log('nameCount: ', nameCount);
+    //console.log('nameCount: ', nameCount);
+    return nameCount;
   };
 
   const levenshtein = (a: string, b: string): number => {
@@ -213,6 +277,18 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 
   return (
     <Box display='flex' flexDirection='column' gap={2}>
+      {Object.entries(nameCount).length > 0 && (
+        <List
+          dense={true}
+          sx={{ border: '1px solid grey', borderRadius: '5px' }}
+        >
+          {Object.entries(nameCount).map(([place, count], index) => (
+            <ListItem key={`nameCount - ${index}`}>
+              <ListItemText primary={place} secondary={`Count: ${count}`} />
+            </ListItem>
+          ))}
+        </List>
+      )}
       {placeNames.map((placeName, index) => (
         <Box display='flex' flexDirection='row' gap={1} key={index}>
           <TextField
