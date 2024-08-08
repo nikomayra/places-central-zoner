@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   TextField,
   Button,
@@ -11,17 +11,7 @@ import {
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
-
-interface PlaceLocation {
-  name: string;
-  lat: number;
-  lng: number;
-}
-
-interface LatLng {
-  lat: number;
-  lng: number;
-}
+import { PlaceLocation, LatLng } from '../interfaces/interfaces';
 
 interface PlaceNamesInputProps {
   setPlaceLocations: React.Dispatch<React.SetStateAction<PlaceLocation[]>>;
@@ -42,45 +32,165 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   const [toggleSearchProgessBar, setToggleSearchProgessBar] = useState(false);
   const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
   const [nameCount, setNameCount] = useState<{ [key: string]: number }>({});
+  const [requestCount, setRequestCount] = useState(0);
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const placesAPI = useMapsLibrary('places');
   const maxResults: number = 20; // 1-20
 
-  // Autocomplete useEffect for dynamically changing map center.
-  const placesRequest = async (placeName: string): Promise<PlaceLocation[]> => {
-    if (!placesAPI) {
-      console.error('Places API is not available');
-      return [];
-    }
+  const levenshtein = useCallback((a: string, b: string): number => {
+    const matrix = Array.from({ length: a.length }).map(() =>
+      Array.from({ length: b.length }).map(() => 0)
+    );
 
-    const request = {
-      textQuery: placeName,
-      fields: ['displayName', 'location'],
-      locationRestriction: calculateBoundingBox(
-        searchCenter,
-        searchRadius * 1609.34
-      ),
-      language: 'en-US',
-      maxResultCount: maxResults,
-    };
+    for (let i = 0; i < a.length; i++) matrix[i][0] = i;
 
-    try {
-      const places = await placesAPI.Place.searchByText(request);
-      return places?.places
-        ?.map((place) => ({
-          name: place.displayName ?? '',
-          lat: place.location?.lat() ?? null,
-          lng: place.location?.lng() ?? null,
-        }))
-        .filter(
-          (place) => place.lat !== null && place.lng !== null
-        ) as PlaceLocation[];
-    } catch (error) {
-      console.error('Error fetching places:', error);
-      return [];
-    }
-  };
+    for (let i = 0; i < b.length; i++) matrix[0][i] = i;
 
-  const verifyPlaceNames = (): boolean => {
+    for (let j = 0; j < b.length; j++)
+      for (let i = 0; i < a.length; i++)
+        matrix[i][j] = Math.min(
+          (i == 0 ? 0 : matrix[i - 1][j]) + 1,
+          (j == 0 ? 0 : matrix[i][j - 1]) + 1,
+          (i == 0 || j == 0 ? 0 : matrix[i - 1][j - 1]) + (a[i] == b[j] ? 0 : 1)
+        );
+
+    return matrix[a.length - 1][b.length - 1];
+  }, []);
+
+  const removeDuplicatePlaces = useCallback(
+    (places: PlaceLocation[]): PlaceLocation[] => {
+      const uniquePlaces: PlaceLocation[] = [];
+      const seenLocations = new Set<string>();
+
+      places.forEach((place) => {
+        const key = `${place.lat},${place.lng}`;
+        if (!seenLocations.has(key)) {
+          seenLocations.add(key);
+          uniquePlaces.push(place);
+        }
+      });
+
+      return uniquePlaces;
+    },
+    []
+  );
+
+  // Finds square box around circle for locationRestriction definition
+  const calculateBoundingBox = useCallback(
+    (center: LatLng, radius: number): google.maps.LatLngBounds => {
+      const { lat, lng } = center;
+      const radiusInKm = radius * 0.001; // Convert meters to kilometers
+
+      // Earth's radius in kilometers
+      const earthRadius = 6371.0;
+
+      // Latitude delta
+      const latDelta = radiusInKm / earthRadius;
+      const latDeltaDeg = latDelta * (180 / Math.PI) * 0.9; // 10% smaller to closer match the circle
+
+      // Longitude delta, compensate for shrinking earth radius in latitude
+      const lngDeltaDeg =
+        (radiusInKm / (earthRadius * Math.cos(lat * (Math.PI / 180)))) *
+        (180 / Math.PI);
+
+      // Define the bounding box
+      const northeast = {
+        lat: Math.min(lat + latDeltaDeg, 90),
+        lng: Math.min(lng + lngDeltaDeg, 180),
+      };
+
+      const southwest = {
+        lat: Math.max(lat - latDeltaDeg, -90),
+        lng: Math.max(lng - lngDeltaDeg, -180),
+      };
+
+      return new google.maps.LatLngBounds(
+        new google.maps.LatLng(southwest.lat, southwest.lng),
+        new google.maps.LatLng(northeast.lat, northeast.lng)
+      );
+    },
+    []
+  );
+
+  const calculateNameCount = useCallback(
+    (places: PlaceLocation[]): { [key: string]: number } => {
+      // Count occurrences of each place name
+      const nameCount: { [key: string]: number } = {};
+      places.forEach((place) => {
+        const name = place.name;
+        if (!nameCount[name]) {
+          nameCount[name] = 0;
+        }
+        nameCount[name]++;
+      });
+      //console.log('nameCount: ', nameCount);
+      return nameCount;
+    },
+    []
+  );
+
+  // Place API javascript implementation
+  const placesRequest = useCallback(
+    async (placeName: string): Promise<PlaceLocation[]> => {
+      if (!placesAPI) {
+        console.error('Places API is not available');
+        showAlert('error', 'Places API is not available');
+        return [];
+      }
+
+      if (isButtonDisabled) {
+        showAlert('error', 'Too many requests. Please wait a moment.');
+        return [];
+      }
+
+      setRequestCount((prevCount) => prevCount + 1);
+
+      // 5 requests per 30s limit
+      if (requestCount >= 5) {
+        setIsButtonDisabled(true);
+        setTimeout(() => setIsButtonDisabled(false), 30000); // 30s cooldown
+      }
+
+      const request = {
+        textQuery: placeName,
+        fields: ['displayName', 'location'],
+        locationRestriction: calculateBoundingBox(
+          searchCenter,
+          searchRadius * 1609.34
+        ),
+        language: 'en-US',
+        maxResultCount: maxResults,
+      };
+
+      try {
+        const places = await placesAPI.Place.searchByText(request);
+        return places?.places
+          ?.map((place) => ({
+            name: place.displayName ?? '',
+            lat: place.location?.lat() ?? null,
+            lng: place.location?.lng() ?? null,
+          }))
+          .filter(
+            (place) => place.lat !== null && place.lng !== null
+          ) as PlaceLocation[];
+      } catch (error) {
+        console.error('Error fetching places:', error);
+        showAlert('error', 'Error fetching places');
+        return [];
+      }
+    },
+    [
+      calculateBoundingBox,
+      isButtonDisabled,
+      placesAPI,
+      requestCount,
+      searchCenter,
+      searchRadius,
+      showAlert,
+    ]
+  );
+
+  const verifyPlaceNames = useCallback((): boolean => {
     // make sure place names input aren't too similar
     // Trying to avoid case of: Chipotle & Chipotles
     // It would simplify to chipotle and analyze would fail, needs minimum 2 places
@@ -99,9 +209,9 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
       }
     }
     return true;
-  };
+  }, [levenshtein, placeNames]);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     try {
       //Try to prevent very similar names prior to API calls.
       if (!verifyPlaceNames()) {
@@ -159,95 +269,16 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
       showAlert('error', 'Search failed.');
       setToggleSearchProgessBar(false);
     }
-  };
-
-  const removeDuplicatePlaces = (places: PlaceLocation[]): PlaceLocation[] => {
-    const uniquePlaces: PlaceLocation[] = [];
-    const seenLocations = new Set<string>();
-
-    places.forEach((place) => {
-      const key = `${place.lat},${place.lng}`;
-      if (!seenLocations.has(key)) {
-        seenLocations.add(key);
-        uniquePlaces.push(place);
-      }
-    });
-
-    return uniquePlaces;
-  };
-
-  // Finds square box around circle for locationRestriction definition
-  const calculateBoundingBox = (
-    center: LatLng,
-    radius: number
-  ): google.maps.LatLngBounds => {
-    const { lat, lng } = center;
-    const radiusInKm = radius * 0.001; // Convert meters to kilometers
-
-    // Earth's radius in kilometers
-    const earthRadius = 6371.0;
-
-    // Latitude delta
-    const latDelta = radiusInKm / earthRadius;
-    const latDeltaDeg = latDelta * (180 / Math.PI) * 0.9; // 10% smaller to closer match the circle
-
-    // Longitude delta, compensate for shrinking earth radius in latitude
-    const lngDeltaDeg =
-      (radiusInKm / (earthRadius * Math.cos(lat * (Math.PI / 180)))) *
-      (180 / Math.PI);
-
-    // Define the bounding box
-    const northeast = {
-      lat: Math.min(lat + latDeltaDeg, 90),
-      lng: Math.min(lng + lngDeltaDeg, 180),
-    };
-
-    const southwest = {
-      lat: Math.max(lat - latDeltaDeg, -90),
-      lng: Math.max(lng - lngDeltaDeg, -180),
-    };
-
-    return new google.maps.LatLngBounds(
-      new google.maps.LatLng(southwest.lat, southwest.lng),
-      new google.maps.LatLng(northeast.lat, northeast.lng)
-    );
-  };
-
-  const calculateNameCount = (
-    places: PlaceLocation[]
-  ): { [key: string]: number } => {
-    // Count occurrences of each place name
-    const nameCount: { [key: string]: number } = {};
-    places.forEach((place) => {
-      const name = place.name;
-      if (!nameCount[name]) {
-        nameCount[name] = 0;
-      }
-      nameCount[name]++;
-    });
-    //console.log('nameCount: ', nameCount);
-    return nameCount;
-  };
-
-  const levenshtein = (a: string, b: string): number => {
-    const matrix = Array.from({ length: a.length }).map(() =>
-      Array.from({ length: b.length }).map(() => 0)
-    );
-
-    for (let i = 0; i < a.length; i++) matrix[i][0] = i;
-
-    for (let i = 0; i < b.length; i++) matrix[0][i] = i;
-
-    for (let j = 0; j < b.length; j++)
-      for (let i = 0; i < a.length; i++)
-        matrix[i][j] = Math.min(
-          (i == 0 ? 0 : matrix[i - 1][j]) + 1,
-          (j == 0 ? 0 : matrix[i][j - 1]) + 1,
-          (i == 0 || j == 0 ? 0 : matrix[i - 1][j - 1]) + (a[i] == b[j] ? 0 : 1)
-        );
-
-    return matrix[a.length - 1][b.length - 1];
-  };
+  }, [
+    calculateNameCount,
+    levenshtein,
+    placeNames,
+    placesRequest,
+    removeDuplicatePlaces,
+    setPlaceLocations,
+    showAlert,
+    verifyPlaceNames,
+  ]);
 
   const handleChange = (index: number, value: string) => {
     const newplaceNames = [...placeNames];
@@ -317,7 +348,12 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         Add location...
       </Button>
       {toggleSearchProgessBar && <LinearProgress color='primary' />}
-      <Button variant='contained' color='primary' onClick={handleSearch}>
+      <Button
+        variant='contained'
+        color='primary'
+        onClick={handleSearch}
+        disabled={isButtonDisabled}
+      >
         Search
       </Button>
     </Box>

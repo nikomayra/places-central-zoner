@@ -5,38 +5,67 @@ import {
   Map,
   useMap,
   AdvancedMarker,
-  //Pin,
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
-
-type PlaceLocation = {
-  name: string;
-  lat: number;
-  lng: number;
-};
-
-interface GeoLocation {
-  lat: number;
-  lng: number;
-}
-
-interface Cluster {
-  center: GeoLocation;
-  cluster: number;
-  places: PlaceLocation[];
-  wcss: number;
-  radius: number;
-}
+import { PlaceLocation, LatLng, Cluster } from '../interfaces/interfaces';
 
 interface MapComponentProps {
   placeLocations: PlaceLocation[];
-  searchCenter: GeoLocation;
-  setSearchCenter: React.Dispatch<React.SetStateAction<GeoLocation>>;
+  searchCenter: LatLng;
+  setSearchCenter: React.Dispatch<React.SetStateAction<LatLng>>;
   searchRadius: number;
   setSearchRadius: React.Dispatch<React.SetStateAction<number>>;
   clusters: Cluster[];
 }
-// 1609.34 meters = miles
+
+// 1609.34 meters = 1 mile
+const MILES_TO_METERS = 1609.34;
+
+// Predefined HSL colors for place markers
+const PREDEFINED_COLORS = [
+  'hsl(0, 80%, 50%)', // Red
+  'hsl(30, 80%, 50%)', // Orange
+  'hsl(60, 80%, 50%)', // Yellow
+  'hsl(120, 80%, 50%)', // Green
+  'hsl(180, 80%, 50%)', // Cyan
+  'hsl(240, 80%, 50%)', // Blue
+  'hsl(300, 80%, 50%)', // Purple
+  //'hsl(360, 70%, 50%)', // Red again to show it's a loop
+  // Add more colors if needed
+];
+
+// Utility function to lighten a given HSL color
+const getLighterColor = (color: string, lightness: number): string => {
+  if (!color) return `hsl(0, 0%, 0%)`; // Default to black if color is undefined
+  const hslColor = `hsl(${color.slice(4, -6)}, ${lightness}%)`;
+  //console.log('hslColor: ', hslColor);
+  return hslColor;
+};
+
+// Function to get a random color from the predefined list
+const getRandomColor = (() => {
+  // Shuffle function to randomize colors
+  const shuffleArray = (array: string[]): string[] => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  };
+
+  let shuffledColors = shuffleArray([...PREDEFINED_COLORS]);
+  let index = 0;
+
+  return (): string => {
+    if (index >= shuffledColors.length) {
+      shuffledColors = shuffleArray([...PREDEFINED_COLORS]);
+      index = 0;
+    }
+    return shuffledColors[index++];
+  };
+})();
+
+// Main MapComponent
 const MapComponent: React.FC<MapComponentProps> = ({
   placeLocations,
   searchCenter,
@@ -53,48 +82,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
   const circlesRef = useRef<google.maps.Circle[]>([]);
 
-  const predefinedColors = [
-    'hsl(0, 80%, 50%)', // Red
-    'hsl(30, 80%, 50%)', // Orange
-    'hsl(60, 80%, 50%)', // Yellow
-    'hsl(120, 80%, 50%)', // Green
-    'hsl(180, 80%, 50%)', // Cyan
-    'hsl(240, 80%, 50%)', // Blue
-    'hsl(300, 80%, 50%)', // Purple
-    //'hsl(360, 70%, 50%)', // Red again to show it's a loop
-    // Add more colors if needed
-  ];
-
-  const getLighterColor = (color: string, lightness: number): string => {
-    if (!color) return `hsl(0, 0%, 0%)`; // Default to black if color is undefined
-    const hslColor = `hsl(${color.slice(4, -6)}, ${lightness}%)`;
-    //console.log('hslColor: ', hslColor);
-    return hslColor;
-  };
-
-  const getRandomColor = (() => {
-    // Shuffle function to randomize colors
-    const shuffleArray = (array: string[]): string[] => {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-    };
-
-    let shuffledColors = shuffleArray([...predefinedColors]);
-    let index = 0;
-
-    return (): string => {
-      if (index >= shuffledColors.length) {
-        shuffledColors = shuffleArray([...predefinedColors]);
-        index = 0;
-      }
-      return shuffledColors[index++];
-    };
-  })();
-
-  // Autocomplete useEffect for dynamically changing map center.
+  // Effect to initialize autocomplete and handle place selection
   useEffect(() => {
     if (!places || !inputRef.current) return;
 
@@ -111,7 +99,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
       );
 
       autocompleteRef.current.addListener('place_changed', () => {
-        //console.log('PLACE CHANGED...');
         const place = autocompleteRef.current?.getPlace();
         if (place?.geometry?.location) {
           const location = place.geometry.location;
@@ -124,7 +111,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   }, [places, setSearchCenter]);
 
-  // Find & set the bounds for the 'square' map given a circle search area
+  // Effect to adjust map bounds based on the search center and radius
   useEffect(() => {
     if (!map || !searchCenter || !searchRadius) return;
 
@@ -135,7 +122,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         strokeOpacity: 0.6,
         strokeColor: '#ffffff',
         center: { lat: searchCenter.lat, lng: searchCenter.lng },
-        radius: searchRadius * 1609.34,
+        radius: searchRadius * MILES_TO_METERS,
       });
       circleRef.current = circle;
     } else {
@@ -143,7 +130,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         lat: searchCenter.lat,
         lng: searchCenter.lng,
       });
-      circleRef.current.setRadius(searchRadius * 1609.34);
+      circleRef.current.setRadius(searchRadius * MILES_TO_METERS);
     }
 
     const bounds = circleRef.current.getBounds();
@@ -159,7 +146,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     };
   }, [map, searchCenter, searchRadius]);
 
-  // Handle window resize to adjust map bounds
+  // Effect to handle window resize and adjust map bounds accordingly
   useEffect(() => {
     if (!map) return;
 
@@ -179,7 +166,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     };
   }, [map]);
 
-  // Define pin colors for markers, same color for each place type
+  // Effect to define pin colors for markers, ensuring same color for each place type
   useEffect(() => {
     const newPlaceColors: { [key: string]: string } = { ...placeColors };
 
@@ -195,8 +182,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
     ) {
       setPlaceColors(newPlaceColors);
     }
-  }, [placeLocations, placeColors, getRandomColor]);
+  }, [placeLocations, placeColors]);
 
+  // Effect to render circles for clusters
   useEffect(() => {
     if (!map) return;
 
@@ -272,8 +260,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
           south: -70.8394937,
           west: -33.3328737,
         }}
-        //center={searchCenter}
-        //defaultZoom={10}
         gestureHandling={'greedy'}
         disableDefaultUI={true}
         zoomControl={false}
@@ -303,15 +289,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 zIndex: '1',
               }}
             />
-            {/* <Pin
-              background={getLighterColor(
-                placeColors[loc.name],
-                clusters.length > 0 ? 80 : 50
-              )}
-              borderColor={'#080808'}
-              glyphColor={'#080808'}
-              scale={0.7}
-            ></Pin> */}
           </AdvancedMarker>
         ))}
         {clusters.map((cluster, index) => (
@@ -319,7 +296,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
             key={`Zone - ${index}`}
             position={{ lat: cluster.center.lat, lng: cluster.center.lng }}
             zIndex={1000}
-            //style={{ transform: 'translate(-50%, -100%)' }}
           >
             <svg
               viewBox='0 0 100 100'
