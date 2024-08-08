@@ -49,6 +49,7 @@ const App: React.FC = () => {
           searchRadius={searchRadius}
           setSearchRadius={setSearchRadius}
           clusters={memoizedClusters}
+          showAlert={showAlert}
         />
         <PlaceNamesInput
           setPlaceLocations={setPlaceLocations}

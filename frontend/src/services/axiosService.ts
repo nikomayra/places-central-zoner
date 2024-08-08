@@ -24,7 +24,7 @@ const analyzePlaces = async (
   placeLocations: PlaceLocation[],
   userPreference: number
 ) => {
-  console.log('/cluster - placeLocations: ', placeLocations);
+  //console.log('/cluster - placeLocations: ', placeLocations);
   const res = await axios.post(`${baseUrl}/cluster`, placeLocations, {
     headers: {
       'Content-Type': 'application/json',

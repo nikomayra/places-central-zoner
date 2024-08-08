@@ -33,7 +33,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
   const [nameCount, setNameCount] = useState<{ [key: string]: number }>({});
   const [requestCount, setRequestCount] = useState(0);
-  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(false);
 
   const levenshtein = useCallback((a: string, b: string): number => {
     const matrix = Array.from({ length: a.length }).map(() =>
@@ -112,6 +112,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
       // 5 requests/min limit
       if (requestCount >= 5) {
         setIsButtonDisabled(true);
+        setRequestCount(0);
         setTimeout(() => setIsButtonDisabled(false), 60000);
       }
 

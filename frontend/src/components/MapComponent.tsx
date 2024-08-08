@@ -16,6 +16,10 @@ interface MapComponentProps {
   searchRadius: number;
   setSearchRadius: React.Dispatch<React.SetStateAction<number>>;
   clusters: Cluster[];
+  showAlert: (
+    severity: 'success' | 'info' | 'warning' | 'error',
+    message: string
+  ) => void;
 }
 
 // 1609.34 meters = 1 mile
@@ -73,6 +77,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   searchRadius,
   setSearchRadius,
   clusters,
+  showAlert,
 }) => {
   const map = useMap();
   const circleRef = useRef<google.maps.Circle | null>(null);
@@ -82,10 +87,51 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
   const circlesRef = useRef<google.maps.Circle[]>([]);
   const [calculatedMarkers, setCalculatedMarkers] = useState<JSX.Element[]>([]);
+  const [isInputDisabled, setIsInputDisabled] = useState<boolean>(false);
+  const requestCountRef = useRef<number>(0);
+  const previousValueRef = useRef<string>('');
 
   // Effect to initialize autocomplete and handle place selection
   useEffect(() => {
     if (!places || !inputRef.current) return;
+
+    const handlePlaceChanged = () => {
+      const place = autocompleteRef.current?.getPlace();
+      if (place?.geometry?.location) {
+        const location = place.geometry.location;
+        setSearchCenter({
+          lat: location.lat(),
+          lng: location.lng(),
+        });
+      }
+    };
+
+    const handleInput = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      const currentValue = target.value;
+
+      // Ignore backspaces or deletion events by checking the value length
+      if (currentValue.length <= previousValueRef.current.length) {
+        previousValueRef.current = currentValue;
+        return;
+      }
+
+      // Update the previous value reference
+      previousValueRef.current = currentValue;
+
+      if (isInputDisabled) return;
+
+      requestCountRef.current += 1;
+
+      if (requestCountRef.current >= 13) {
+        setIsInputDisabled(true);
+        showAlert('error', 'Too many requests. Please wait a moment.');
+        setTimeout(() => {
+          setIsInputDisabled(false);
+          requestCountRef.current = 0;
+        }, 60000);
+      }
+    };
 
     // Initialize autocomplete only if it's not already initialized
     if (!autocompleteRef.current) {
@@ -99,18 +145,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
         options
       );
 
-      autocompleteRef.current.addListener('place_changed', () => {
-        const place = autocompleteRef.current?.getPlace();
-        if (place?.geometry?.location) {
-          const location = place.geometry.location;
-          setSearchCenter({
-            lat: location.lat(),
-            lng: location.lng(),
-          });
-        }
-      });
+      autocompleteRef.current.addListener('place_changed', handlePlaceChanged);
+
+      // Add an event listener for input changes to count requests
+      inputRef.current.addEventListener('input', handleInput);
     }
-  }, [places, setSearchCenter]);
+  }, [isInputDisabled, places, setSearchCenter, showAlert]);
 
   // Effect to adjust map bounds based on the search center and radius
   useEffect(() => {
@@ -265,6 +305,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           label={`Search Center`}
           variant='outlined'
           style={{ flexGrow: 0.3 }}
+          disabled={isInputDisabled}
         />
         <Box
           display='flex'

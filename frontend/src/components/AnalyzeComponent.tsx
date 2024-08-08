@@ -44,7 +44,7 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
           'No zones found, reduce Quality setting if possible.'
         );
       }
-      console.log('Cluster Results: ', clusterResults);
+      //console.log('Cluster Results: ', clusterResults);
       setClusters(clusterResults);
       setToggleAnalyzeProgressBar(false);
     } catch (error) {
