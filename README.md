@@ -11,12 +11,12 @@ Places Central Zoner is a simple web application that finds central locations wh
 **Frontend:** React with TypeScript and Material-UI for the user interface.  
 **Backend:** Flask (Python) for the backend logic and API.  
 **Database:** PostgreSQL for data storage and management.  
-**Mapping and Geolocation:** Google Maps API to handle mapping, store location searches, and distance calculations.  
+**Mapping and Geolocation:** Google Maps Javascript & Places API
 **Deployment:** Render.com for hosting and managing the application.
 
 ## Implementation Steps:
 
-1. (95%) Frontend Development:
+1. (99%) Frontend Development:
 
    - Set up a React project with TypeScript.
    - Integrate Material-UI.
@@ -25,23 +25,28 @@ Places Central Zoner is a simple web application that finds central locations wh
    - Implement UI/UX elements for visibility, readability, useability.
    - Implement data UI elements for greater understanding of results.
 
-2. (70%) Backend Development:
+2. (85%) Backend Development:
 
    - Set up a Flask project.
    - Implement logic to calculate the central minimum locations based on store distances.
      - Using a dynamic count based system. Brute-force, DBScan, and KMeans.
    - Setup PostgreSQL for storing/handling data.
 
-3. () Mapping and Geolocation:
+3. (95%) Mapping and Geolocation:
 
    - Use the Google Maps API to display the map and markers for the places/central-zones.
    - Calculate the central points and draw circles representing the radius to the farthest store.
    - Use Google Maps API for drawing central zone markers
 
-4. Implement OAuth and any other protection to avoid unnecessary Google API calls.
+4. (5%) Implement OAuth and any other protection to avoid unnecessary Google API calls.
 
-5. Use complete app and then adjust as needed...test/fix/etc.
+5. (60%) Use complete app and then adjust as needed...test/fix/etc.
 
-6. Deployment:
+6. (0%) Deployment:
    - Containerize the application using Docker (optional but recommended).
    - Deploy the application to Render.com, ensuring the database is configured correctly.
+
+## Potential future improvements
+
+- Update to Autocomplete from Places (NEW) using "Data API" & Sessions.
+- Use vanilla google Maps JS instead of vis.gl library stuff.
