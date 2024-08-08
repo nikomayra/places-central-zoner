@@ -8,108 +8,162 @@ from collections import OrderedDict
 bp = Blueprint('routes', __name__)
 
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
+MILES_TO_METERS = 1609.34
 
-# @bp.route('/search-places', methods=['POST'])
-# def search():
-#     data = request.json
-#     # Example data structure: 
-#     # data:  {'placeNames': ['starbucks', 'chipotle'], 
-#     # 'searchCenter': {'lat': 47.608013, 'lng': -122.335167}, 
-#     # 'searchRadius': 5}
+@bp.route('/search-places', methods=['POST'])
+def search():
+    data = request.json
+    # Example data structure: 
+    # data:  {'placeNames': ['starbucks', 'chipotle'], 
+    # 'searchCenter': {'lat': 47.608013, 'lng': -122.335167}, 
+    # 'searchRadius': 5}
 
-#     if not data:
-#         return jsonify({'error': 'No data provided'}), 400
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
     
-#     placeNames = data.get('placeNames', [])
-#     searchCenter = data.get('searchCenter', {})
-#     searchRadius = data.get('searchRadius', 0) * 1609.34 #miles to meters
-#     maxPageResults = 10 #20 max...if you want more you use the nextPageToken for the next page results
+    placeNames = data.get('placeNames', [])
+    searchCenter = data.get('searchCenter', {})
+    searchRadius = data.get('searchRadius', 0) * MILES_TO_METERS
+    maxPageResults = 20 #20 max...if you want more you use the nextPageToken for the next page results
 
-#     if not placeNames or not searchCenter or not searchRadius:
-#         return jsonify({'error': 'Invalid data structure'}), 400
+    if not placeNames or not searchCenter or not searchRadius:
+        return jsonify({'error': 'Invalid data structure'}), 400
     
-#     results = []
-#     for placeName in placeNames:
-#         placeData = get_place_data(
-#             placeName, 
-#             (searchCenter['lat'], searchCenter['lng']), 
-#             searchRadius, 
-#             maxPageResults
-#         )
-#         if placeData:
-#             for place in placeData.get('places', []):
-#                 placeLocation = {
-#                     'name': place['displayName']['text'],
-#                     'lat': place['location']['latitude'],
-#                     'lng': place['location']['longitude']
-#                 }
-#                 results.append(placeLocation)
+    response_data=[]
+    for placeName in placeNames:
+        results = []
+        placeData = get_place_data(
+            placeName, 
+            (searchCenter['lat'], searchCenter['lng']), 
+            searchRadius, 
+            maxPageResults
+        )
+        if placeData:
+            for place in placeData.get('places', []):
+                placeLocation = {
+                    'name': place['displayName']['text'],
+                    'lat': place['location']['latitude'],
+                    'lng': place['location']['longitude']
+                }
+                results.append(placeLocation)
+            response_data.extend(refine_results(placeName, results))
     
-#     response_data = {'places': results}
-#     #print(jsonify(response_data))
-#     return jsonify(response_data)
+    #response_data = results
+    #print(jsonify(response_data))
+    return jsonify(response_data)
 
-# def calculate_bounding_box(center, radius):
-#     lat, lng = center
-#     radius_in_km = radius * .001  # Convert meters to kilometers
+def levenshtein(a, b):
+    matrix = [[0] * len(b) for _ in range(len(a))]
 
-#     # Earth’s radius in kilometers
-#     earth_radius = 6371.0
+    for i in range(len(a)):
+        matrix[i][0] = i
 
-#     # Latitude delta
-#     lat_delta = radius_in_km / earth_radius
-#     lat_delta_deg = math.degrees(lat_delta) * .9 #10% smaller to closer match the circle
+    for j in range(len(b)):
+        matrix[0][j] = j
 
-#     # Longitude delta, compensate for shrinking earth radius in latitude
-#     lng_delta_deg = math.degrees(radius_in_km / (earth_radius * math.cos(math.radians(lat))))
+    for j in range(len(b)):
+        for i in range(len(a)):
+            matrix[i][j] = min(
+                (matrix[i - 1][j] if i > 0 else 0) + 1,
+                (matrix[i][j - 1] if j > 0 else 0) + 1,
+                (matrix[i - 1][j - 1] if i > 0 and j > 0 else 0) + (0 if a[i] == b[j] else 1)
+            )
 
-#     # Define the bounding box
-#     northeast = (min(lat + lat_delta_deg, 90), min(lng + lng_delta_deg, 180))
-#     southwest = (max(lat - lat_delta_deg, -90), max(lng - lng_delta_deg, -180))
+    return matrix[len(a) - 1][len(b) - 1]
 
-#     return northeast, southwest
+def refine_results(placeName, results):
+    # Score how well the result names match the searched name
+    # Find the best scoring result name vs searched name
+    # Use that score to filter out all other results
+    # Try to provide user with what they intended.
+    likeScore = []
+    for place in results:
+        likeScore.append(levenshtein(place['name'].casefold(), placeName.casefold()))
 
-# # Returns json of places: displayName.text, location.latitude & longitude
-# def get_place_data(placeName, searchCenter, searchRadius, maxPageResults):
-#     northeast, southwest = calculate_bounding_box(searchCenter, searchRadius)
-#     url = 'https://places.googleapis.com/v1/places:searchText'
-#     data = {
-#             'textQuery': placeName,
-#             'locationRestriction':{
-#                 "rectangle": {
-#                     "low": {
-#                         "latitude": southwest[0],
-#                         "longitude": southwest[1]
-#                     },
-#                     "high": {
-#                         "latitude": northeast[0],
-#                         "longitude": northeast[1]
-#                     }
-#                 }
-#             },
-#             'pageSize': maxPageResults
-#             }
-#     headers = {'Content-Type': 'application/json',
-#                 'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-#                 'X-Goog-FieldMask': 'places.displayName,places.location'}
+    bestScore = min(likeScore)
+    # Filter results to exclude elements where likeScore != bestScore
+    filtered_results = [place for i, place in enumerate(results) if likeScore[i] == bestScore]
 
-#     json_data = json.dumps(data)
-#     #print(json_data)
+    # Remove duplicate places
+    unique_filtered_results = list({
+        (place['lat'], place['lng']): place for place in filtered_results
+    }.values())
 
-#     try:
-#         response = requests.post(url, data=json_data, headers=headers)
-#         response.raise_for_status()  # Raise an error for bad status codes
-#         data = response.json()
-#         return data
-#     except requests.exceptions.HTTPError as http_err:
-#         print(f"HTTP error occurred: {http_err}")
-#     except requests.exceptions.ConnectionError as conn_err:
-#         print(f"Connection error occurred: {conn_err}")
-#     except requests.exceptions.Timeout as timeout_err:
-#         print(f"Timeout error occurred: {timeout_err}")
-#     except requests.exceptions.RequestException as req_err:
-#         print(f"An error occurred: {req_err}")
-#     return None  # Return None in case of any error
+    return unique_filtered_results
+
+# for (const place of pResults) {
+#     likeScore.push(
+#     levenshtein(place.name.toLowerCase(), placeName.toLowerCase())
+#     );
+# }
+
+# const bestScore: number = Math.min(...likeScore);
+# const rResults = pResults.filter((_, i) => likeScore[i] === bestScore);
+
+# placeLocations.push(...rResults);
+# likeScore = [];
+
+def calculate_bounding_box(center, radius):
+    lat, lng = center
+    radius_in_km = radius * .001  # Convert meters to kilometers
+
+    # Earth’s radius in kilometers
+    earth_radius = 6371.0
+
+    # Latitude delta
+    lat_delta = radius_in_km / earth_radius
+    lat_delta_deg = math.degrees(lat_delta) * .9 #10% smaller to closer match the circle
+
+    # Longitude delta, compensate for shrinking earth radius in latitude
+    lng_delta_deg = math.degrees(radius_in_km / (earth_radius * math.cos(math.radians(lat))))
+
+    # Define the bounding box
+    northeast = (min(lat + lat_delta_deg, 90), min(lng + lng_delta_deg, 180))
+    southwest = (max(lat - lat_delta_deg, -90), max(lng - lng_delta_deg, -180))
+
+    return northeast, southwest
+
+# Returns json of places: displayName.text, location.latitude & longitude
+def get_place_data(placeName, searchCenter, searchRadius, maxPageResults):
+    northeast, southwest = calculate_bounding_box(searchCenter, searchRadius)
+    url = 'https://places.googleapis.com/v1/places:searchText'
+    data = {
+            'textQuery': placeName,
+            'locationRestriction':{
+                "rectangle": {
+                    "low": {
+                        "latitude": southwest[0],
+                        "longitude": southwest[1]
+                    },
+                    "high": {
+                        "latitude": northeast[0],
+                        "longitude": northeast[1]
+                    }
+                }
+            },
+            'pageSize': maxPageResults
+            }
+    headers = {'Content-Type': 'application/json',
+                'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+                'X-Goog-FieldMask': 'places.displayName,places.location'}
+
+    json_data = json.dumps(data)
+    #print(json_data)
+
+    try:
+        response = requests.post(url, data=json_data, headers=headers)
+        response.raise_for_status()  # Raise an error for bad status codes
+        data = response.json()
+        return data
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except requests.exceptions.ConnectionError as conn_err:
+        print(f"Connection error occurred: {conn_err}")
+    except requests.exceptions.Timeout as timeout_err:
+        print(f"Timeout error occurred: {timeout_err}")
+    except requests.exceptions.RequestException as req_err:
+        print(f"An error occurred: {req_err}")
+    return None  # Return None in case of any error
 
 # ---------------------------------------------------------------------------------
 
@@ -237,7 +291,7 @@ def evaluate_clusters(clusters, preference):
     valid_clusters = []
     total_wcss = 0
     count_valid = 0
-    wcss_threshold = .0005 - (.0001 * preference)
+    wcss_threshold = .0005 - (.00015 * preference)
     print('wcss_threshold',wcss_threshold)
 
     # Helper function to create a unique identifier for a cluster based on its points

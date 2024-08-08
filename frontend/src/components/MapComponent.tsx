@@ -23,13 +23,13 @@ const MILES_TO_METERS = 1609.34;
 
 // Predefined HSL colors for place markers
 const PREDEFINED_COLORS = [
-  'hsl(0, 80%, 50%)', // Red
-  'hsl(30, 80%, 50%)', // Orange
-  'hsl(60, 80%, 50%)', // Yellow
-  'hsl(120, 80%, 50%)', // Green
-  'hsl(180, 80%, 50%)', // Cyan
-  'hsl(240, 80%, 50%)', // Blue
-  'hsl(300, 80%, 50%)', // Purple
+  'hsl(0, 80%, 60%)', // Red
+  'hsl(30, 80%, 60%)', // Orange
+  'hsl(60, 80%, 60%)', // Yellow
+  'hsl(120, 80%, 60%)', // Green
+  'hsl(180, 80%, 60%)', // Cyan
+  'hsl(240, 80%, 60%)', // Blue
+  'hsl(300, 80%, 60%)', // Purple
   //'hsl(360, 70%, 50%)', // Red again to show it's a loop
   // Add more colors if needed
 ];
@@ -81,6 +81,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const places = useMapsLibrary('places');
   const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
   const circlesRef = useRef<google.maps.Circle[]>([]);
+  const [calculatedMarkers, setCalculatedMarkers] = useState<JSX.Element[]>([]);
 
   // Effect to initialize autocomplete and handle place selection
   useEffect(() => {
@@ -216,6 +217,46 @@ const MapComponent: React.FC<MapComponentProps> = ({
     };
   }, [map, clusters]);
 
+  // Calculate markers and marker visuals if placeLocations and/or clusters change
+  useEffect(() => {
+    const markers = placeLocations.map((loc) => {
+      const isInCluster = clusters.some((cluster) =>
+        cluster.places.some(
+          (place) => place.lat === loc.lat && place.lng === loc.lng
+        )
+      );
+
+      const borderColor = !isInCluster
+        ? getLighterColor(placeColors[loc.name], 20)
+        : '#f50057';
+
+      const markerOpacity = clusters.length > 0 && !isInCluster ? 0.6 : 1.0;
+
+      return (
+        <AdvancedMarker
+          key={loc.name + loc.lat + loc.lng}
+          position={{ lat: loc.lat, lng: loc.lng }}
+          title={loc.name + ':\n\n lat: ' + loc.lat + ' lng: ' + loc.lng}
+          zIndex={1}
+        >
+          <div
+            style={{
+              width: '15px',
+              height: '15px',
+              borderRadius: '50%',
+              backgroundColor: placeColors[loc.name],
+              border: `2px solid ${borderColor}`,
+              opacity: markerOpacity,
+              zIndex: '1',
+            }}
+          />
+        </AdvancedMarker>
+      );
+    });
+
+    setCalculatedMarkers(markers);
+  }, [placeLocations, clusters, placeColors]);
+
   return (
     <Box display='flex' flexDirection='column' gap={2}>
       <Box display='flex' flexDirection='row' gap={2}>
@@ -268,29 +309,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         mapTypeControl={false}
         mapTypeId={'hybrid'}
       >
-        {placeLocations.map((loc) => (
-          <AdvancedMarker
-            key={loc.name + loc.lat + loc.lng}
-            position={{ lat: loc.lat, lng: loc.lng }}
-            title={loc.name + ':\n\n lat: ' + loc.lat + ' lng: ' + loc.lng}
-            zIndex={1}
-          >
-            <div
-              style={{
-                width: '15px',
-                height: '15px',
-                borderRadius: '50%',
-                backgroundColor: placeColors[loc.name],
-                border: `2px solid ${getLighterColor(
-                  placeColors[loc.name],
-                  20
-                )}`,
-                opacity: clusters.length > 0 ? 0.6 : 1,
-                zIndex: '1',
-              }}
-            />
-          </AdvancedMarker>
-        ))}
+        {calculatedMarkers}
         {clusters.map((cluster, index) => (
           <AdvancedMarker
             key={`Zone - ${index}`}

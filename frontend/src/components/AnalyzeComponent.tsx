@@ -38,7 +38,13 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
         placeLocations,
         preference
       );
-      //console.log('Clusters: ', clusterResults);
+      if (clusterResults.length <= 0) {
+        showAlert(
+          'warning',
+          'No zones found, reduce Quality setting if possible.'
+        );
+      }
+      console.log('Cluster Results: ', clusterResults);
       setClusters(clusterResults);
       setToggleAnalyzeProgressBar(false);
     } catch (error) {
@@ -54,7 +60,7 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
       <ListItem style={style} key={index} component='div' disablePadding>
         <ListItemText
           key={`Clusters - ${index}`}
-          primary={`Central Zone ${index + 1}`}
+          primary={`Zone ${index + 1}`}
           secondary={`Radius (mi.): ${(
             clusters[index].radius / 1609.34
           ).toPrecision(3)}, WCSS Score: ${clusters[index].wcss.toPrecision(

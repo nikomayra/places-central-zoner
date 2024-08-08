@@ -1,20 +1,10 @@
 import axios from 'axios';
+import { PlaceLocation, LatLng } from '../interfaces/interfaces';
 const baseUrl = '/api';
-
-interface GeoLocation {
-  lat: number;
-  lng: number;
-}
-
-interface PlaceLocation {
-  name: string;
-  lat: number;
-  lng: number;
-}
 
 const searchPlaces = async (
   placeNames: string[],
-  searchCenter: GeoLocation,
+  searchCenter: LatLng,
   searchRadius: number
 ) => {
   const data = {
@@ -34,6 +24,7 @@ const analyzePlaces = async (
   placeLocations: PlaceLocation[],
   userPreference: number
 ) => {
+  console.log('/cluster - placeLocations: ', placeLocations);
   const res = await axios.post(`${baseUrl}/cluster`, placeLocations, {
     headers: {
       'Content-Type': 'application/json',
@@ -43,4 +34,4 @@ const analyzePlaces = async (
   return res.data;
 };
 
-export default { searchPlaces, analyzePlaces };
+export default { analyzePlaces, searchPlaces };
