@@ -12,6 +12,7 @@ import {
 import { Delete } from '@mui/icons-material';
 import { PlaceLocation, LatLng } from '../interfaces/interfaces';
 import axiosService from '../services/axiosService';
+import storage from '../utils/storageUtil';
 
 interface PlaceNamesInputProps {
   setPlaceLocations: React.Dispatch<React.SetStateAction<PlaceLocation[]>>;
@@ -118,10 +119,16 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 
       setToggleSearchProgessBar(true);
       setPlaceLocations([]);
+      const idToken = storage.getSessionItem('id_token');
+      if (!idToken) {
+        console.error('No id_token found...');
+        return;
+      }
       const placeLocations: PlaceLocation[] = await axiosService.searchPlaces(
         placeNames,
         searchCenter,
-        searchRadius
+        searchRadius,
+        idToken
       );
 
       // If we ended up with less than 2 places error out..

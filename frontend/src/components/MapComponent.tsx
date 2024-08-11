@@ -244,7 +244,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         strokeWeight: 3,
         center: { lat: cluster.center.lat, lng: cluster.center.lng },
         radius: cluster.radius,
-        zIndex: 1000,
+        zIndex: 500,
       });
 
       circlesRef.current.push(circle);
@@ -271,6 +271,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         : '#f50057';
 
       const markerOpacity = clusters.length > 0 && !isInCluster ? 0.6 : 1.0;
+      const clusterMarkerzIndex = !isInCluster ? 1 : 1000;
 
       return (
         <AdvancedMarker
@@ -287,7 +288,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
               backgroundColor: placeColors[loc.name],
               border: `2px solid ${borderColor}`,
               opacity: markerOpacity,
-              zIndex: '1',
+              zIndex: clusterMarkerzIndex,
             }}
           />
         </AdvancedMarker>

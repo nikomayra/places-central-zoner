@@ -3,15 +3,126 @@ import os, math, json, requests
 from sklearn.cluster import KMeans, DBSCAN
 import numpy as np
 from itertools import combinations
-from collections import OrderedDict
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from google.auth.transport.requests import Request
+from google.oauth2 import id_token
+from functools import wraps
 
 bp = Blueprint('routes', __name__)
 
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:5173")
 MILES_TO_METERS = 1609.34
 
+@bp.route('/', defaults={'path': ''})
+@bp.route('/<path:path>')
+def catch_all(path):
+    return 'You want path: %s' % path
+
+# ---------------------------------------------------------------------------------
+
+def token_required(f):
+    @wraps(f)
+    def validation_decorator(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({'message': 'Token is missing'}), 401
+        token = auth_header.split(' ')[1]
+        try:
+            user_info = id_token.verify_oauth2_token(token, Request(), GOOGLE_CLIENT_ID)
+        except ValueError as error:
+            return jsonify({'message': 'Token is invalid or expired', 'error': str(error)}), 401
+        return f(user_info, *args, **kwargs)
+    return validation_decorator
+
+
+@bp.route('/auth-user', methods=['POST'])
+@token_required
+def auth_user(user_info):
+
+    return jsonify({'message': 'Token is valid', 'user': user_info}), 200
+
+# ---------------------------------------------------------------------------------
+
+# @bp.route('/refresh-token', methods=['POST'])
+# def refresh_token():
+#     refresh_token = request.json.get('refresh_token')
+    
+#     if not refresh_token:
+#         return jsonify({'error': 'Refresh token is missing'}), 400
+
+#     try:
+#         credentials = Credentials(
+#             token=None,
+#             refresh_token=refresh_token,
+#             token_uri='https://oauth2.googleapis.com/token',
+#             client_id=GOOGLE_CLIENT_ID,
+#             client_secret=GOOGLE_CLIENT_SECRET
+#         )
+#         request_adapter = Request()
+#         credentials.refresh(request_adapter)
+#         new_token = credentials.token
+#         new_expiry = credentials.expiry
+#     except Exception as e:
+#         new_token, error = None, str(e)
+
+#     if not new_token:
+#         return jsonify({'error': 'Token refresh failed', 'details': error}), 400
+
+#     return jsonify({
+#         'access_token': new_token,
+#         'expires_in': new_expiry
+#     })
+
+# @bp.route('/auth-code', methods=['POST'])
+# def exchange_auth_code():
+#     auth_code = request.json.get('code')
+#     if not auth_code:
+#         return jsonify({'error': 'Authorization code is missing'}), 400
+    
+#     # Create a client config dictionary from environment variables
+#     client_config = {
+#         "web": {
+#             "client_id": GOOGLE_CLIENT_ID,
+#             "client_secret": GOOGLE_CLIENT_SECRET,
+#             "redirect_uris": [REDIRECT_URI],
+#             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+#             "token_uri": "https://oauth2.googleapis.com/token"
+#         }
+#     }
+
+#     # Create the Flow object
+#     flow = Flow.from_client_config(client_config, scopes=[
+#         'openid',
+#         'https://www.googleapis.com/auth/userinfo.profile',
+#         'https://www.googleapis.com/auth/userinfo.email',
+#         ])
+#     flow.redirect_uri = REDIRECT_URI
+
+#     # Exchange the authorization code for tokens
+#     try:
+#         flow.fetch_token(code=auth_code)
+#     except Exception as e:
+#         return jsonify({'error': f'Token exchange failed: {str(e)}'}), 400
+
+#     credentials = flow.credentials
+
+#     # Respond with the tokens
+#     return jsonify({
+#         'access_token': credentials.token,
+#         'refresh_token': credentials.refresh_token,
+#         'expires_in': credentials.expiry,
+#         'id_token': credentials.id_token
+#     })
+
+# ---------------------------------------------------------------------------------
+
 @bp.route('/search-places', methods=['POST'])
-def search():
+@token_required
+def search(_):
     data = request.json
     # Example data structure: 
     # data:  {'placeNames': ['starbucks', 'chipotle'], 
@@ -21,6 +132,7 @@ def search():
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
+    # print('user_info: ', user_info)
     placeNames = data.get('placeNames', [])
     searchCenter = data.get('searchCenter', {})
     searchRadius = data.get('searchRadius', 0) * MILES_TO_METERS
@@ -90,18 +202,6 @@ def refine_results(placeName, results):
     }.values())
 
     return unique_filtered_results
-
-# for (const place of pResults) {
-#     likeScore.push(
-#     levenshtein(place.name.toLowerCase(), placeName.toLowerCase())
-#     );
-# }
-
-# const bestScore: number = Math.min(...likeScore);
-# const rResults = pResults.filter((_, i) => likeScore[i] === bestScore);
-
-# placeLocations.push(...rResults);
-# likeScore = [];
 
 def calculate_bounding_box(center, radius):
     lat, lng = center
@@ -291,7 +391,7 @@ def evaluate_clusters(clusters, preference):
     valid_clusters = []
     total_wcss = 0
     count_valid = 0
-    wcss_threshold = .0005 - (.00015 * preference)
+    wcss_threshold = .0006 - (.0003 * preference) # 0 -> .0012
     print('wcss_threshold',wcss_threshold)
 
     # Helper function to create a unique identifier for a cluster based on its points
@@ -329,9 +429,8 @@ def evaluate_clusters(clusters, preference):
     return valid_clusters, combined_metric
 
 @bp.route('/cluster', methods=['POST'])
-def cluster_points():
-    places = request.json
-    user_preference = int(request.headers.get('User-Preference'))
+@token_required
+def cluster_points(_):
     # [
     #     {
     #         "lat": 47.662302,
@@ -340,8 +439,12 @@ def cluster_points():
     #     },
     #     ...
     # ]
-    # print('user_preference',user_preference)
-    # print('user_preference - type',type(user_preference))
+    places = request.json
+    user_preference = int(request.headers.get('User-Preference'))
+
+    if not places:
+        return jsonify({'error': 'No places provided'}), 400
+
     # Extract place names and locations
     place_names = [place['name'] for place in places]
     place_locations = np.array([[place['lat'], place['lng']] for place in places])
