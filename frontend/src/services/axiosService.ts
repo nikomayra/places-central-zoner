@@ -62,13 +62,34 @@ const authUser = async (id_token: string) => {
       Authorization: `Bearer ${id_token}`,
     },
   };
-  return await axios.post(`${baseUrl}/auth-user`, undefined, config);
+  const res = await axios.post(`${baseUrl}/auth-user`, undefined, config);
+  return res.data;
+};
+
+const login = async (id_token: string) => {
+  const config = {
+    headers: {
+      Authorization: `Bearer ${id_token}`,
+    },
+  };
+  const res = await axios.post(`${baseUrl}/login`, undefined, config);
+  return res.data;
+};
+
+const logout = async (session_id: string) => {
+  const config = {
+    headers: {
+      SessionId: session_id,
+    },
+  };
+  const res = await axios.post(`${baseUrl}/logout`, undefined, config);
+  return res.data;
 };
 
 export default {
   analyzePlaces,
   searchPlaces,
-  //authGoogle,
-  //refreshAuthToken,
+  login,
+  logout,
   authUser,
 };

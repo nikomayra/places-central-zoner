@@ -7,7 +7,7 @@ import {
   CircularProgress,
   Button,
 } from '@mui/material';
-//import GoogleIcon from '@mui/icons-material/Google';
+import GoogleIcon from '@mui/icons-material/Google';
 import PlaceNamesInput from './components/PlaceNamesInput';
 import MapComponent from './components/MapComponent';
 import HeaderInfoComponent from './components/HeaderInfoComponent';
@@ -22,10 +22,10 @@ import { GoogleLogin, googleLogout } from '@react-oauth/google';
 //import axiosService from './services/axiosService';
 
 const App: React.FC = () => {
-  const { isAuthenticated, loading, logout, userName } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    // Show a loading spinner while checking authentication status
+    console.log('App > Loading...');
     return (
       <div
         style={{
@@ -40,13 +40,9 @@ const App: React.FC = () => {
     );
   }
 
-  const handleLogout = () => {
-    googleLogout();
-    logout();
-  };
-
   return (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <SessionExpiryModal />
       <Stack
         direction='column'
         divider={<Divider orientation='horizontal' flexItem />}
@@ -60,16 +56,8 @@ const App: React.FC = () => {
         }}
       >
         <HeaderInfoComponent />
-        <SessionExpiryModal />
-        {isAuthenticated && (
-          <>
-            <span>{`Logged in as ${userName}`}</span>
-            <Button onClick={handleLogout} color='error' variant='outlined'>
-              Log-out
-            </Button>
-          </>
-        )}
         {/* Conditionally render the app content based on authentication */}
+        {isAuthenticated && <GoogleLogoutButton />}
         {isAuthenticated ? <AuthenticatedApp /> : <GoogleLoginButton />}
       </Stack>
     </div>
@@ -156,13 +144,13 @@ const GoogleLoginButton: React.FC = () => {
       <h3>Sign in to access the App</h3>
       <GoogleLogin
         onSuccess={(credentialResponse) => {
-          console.log('credentialResponse: ', credentialResponse);
+          console.log('Credential Response');
           credentialResponse.credential
             ? login(credentialResponse.credential)
             : console.error('ID_TOKEN returned undefined...');
         }}
         onError={() => {
-          console.log('Login Failed');
+          console.error('Login Failed');
         }}
         theme={'filled_blue'}
         size={'large'}
@@ -171,6 +159,38 @@ const GoogleLoginButton: React.FC = () => {
         //useOneTap
         //auto_select
       />
+    </div>
+  );
+};
+
+// Component for handling Google logout
+const GoogleLogoutButton: React.FC = () => {
+  const { logout, userName } = useAuth();
+
+  const handleLogout = () => {
+    googleLogout();
+    logout();
+  };
+
+  return (
+    <div
+      style={{
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        textAlign: 'center',
+        marginTop: '0',
+      }}
+    >
+      <h4>{`Logged in as ${userName}`}</h4>
+      <Button
+        onClick={handleLogout}
+        color='error'
+        variant='outlined'
+        startIcon={<GoogleIcon />}
+        sx={{ width: '300px' }}
+      >
+        Log-out
+      </Button>
     </div>
   );
 };

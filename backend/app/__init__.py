@@ -1,19 +1,25 @@
 from flask import Flask
 from flask_cors import CORS
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
+from app.extensions import db, migrate
+from app.blueprints import register_blueprints
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
+
+    # Load configuration
+    app.config.from_object('app.config.Config')
     
-    app.config.from_mapping(
-        SECRET_KEY=os.getenv('SECRET_KEY', 'dev_key')
-    )
+    # Initialize extensions
+    # db.init_app(app)
+    # migrate.init_app(app, db)
     
-    from . import routes
-    app.register_blueprint(routes.bp, url_prefix='/api')
+    # Register blueprints
+    register_blueprints(app)
+
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def catch_all(path):
+        return 'You want path: %s' % path
     
     return app
