@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { AuthContextType } from '../interfaces/interfaces';
-import storage from '../utils/storageUtil';
 import axiosService from '../services/axiosService';
 import axios from 'axios';
+import { CircularProgress } from '@mui/material';
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
@@ -16,17 +16,19 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState(null);
-  const [tokenExp, setTokenExp] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [tokenExp, setTokenExp] = useState<number | null>(null);
 
   const login = async (token: string) => {
-    storage.setSessionItem('id_token', token);
+    sessionStorage.setItem('token', token);
     try {
       const { username, tokenExp } = await axiosService.login(token);
       setUserName(username);
-      setTokenExp(tokenExp);
+      setTokenExp(parseInt(tokenExp));
+      sessionStorage.setItem('userName', username);
+      sessionStorage.setItem('tokenExp', tokenExp);
       setIsAuthenticated(true);
     } catch (err) {
       console.error('Failed to login (api)');
@@ -35,42 +37,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('Logged in [authContext]');
   };
 
-  const logout = () => {
-    storage.removeSessionItem('id_token');
+  const logout = async (token: string) => {
+    await axiosService.login(token);
+    sessionStorage.removeItem('token');
     setIsAuthenticated(false);
     console.log('Logged out [authContext]');
   };
 
   useEffect(() => {
-    checkToken();
+    checkSession();
   }, []);
 
-  const checkToken = async () => {
+  const checkSession = async () => {
     console.log('authContext > checkToken');
-    const idToken = storage.getSessionItem('id_token');
-    if (idToken) {
-      try {
-        const res = await axiosService.authUser(idToken);
-        console.log('Authentication res data/status:', res.data, res.status);
-        setUserName(res.data['user']['name']);
-        setTokenExp(res.data['user']['exp']);
-        if (res.status === 200) {
-          console.log('Token validated successfully.');
-          setIsAuthenticated(true);
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      console.error('Failed to find session token');
+      setIsAuthenticated(false);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await axiosService.authSession(token);
+      if (res.authenticated) {
+        console.log('Session validated successfully.');
+        const storedUserName = sessionStorage.getItem('userName');
+        const storedTokenExp = sessionStorage.getItem('tokenExp');
+        setUserName(storedUserName);
+        if (storedTokenExp) {
+          setTokenExp(parseInt(storedTokenExp));
         } else {
-          console.log('Token validation failed.');
-          setIsAuthenticated(false);
+          console.error(
+            'No token expiration found in storage when redefining useStates!'
+          );
         }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          err.response?.data?.error
-            ? console.error(err.response?.data?.error)
-            : console.error('Failed to authenticate by server');
-        }
+        setIsAuthenticated(true);
+      } else {
+        console.log('Token validation failed.');
         setIsAuthenticated(false);
       }
-    } else {
-      console.error('Failed to find session id token');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        err.response?.data?.error
+          ? console.error(err.response?.data?.error)
+          : console.error('Failed to authenticate by server');
+      }
       setIsAuthenticated(false);
     }
     setLoading(false);
@@ -80,8 +92,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     <AuthContext.Provider
       value={{ isAuthenticated, login, logout, loading, userName, tokenExp }}
     >
+      {loading && <AuthLoading />}
       {!loading && children}
     </AuthContext.Provider>
+  );
+};
+
+const AuthLoading: React.FC = () => {
+  console.log('App > Loading...');
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100px',
+      }}
+    >
+      <CircularProgress />
+    </div>
   );
 };
 

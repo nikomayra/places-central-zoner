@@ -46,7 +46,7 @@ def cluster_data(request):
     place_names = [place['name'] for place in places]
     place_latlngs = np.array([[place['lat'], place['lng']] for place in places])
 
-    if not place_names or not place_latlngs:
+    if not place_names or not place_latlngs.all():
         return jsonify({'error': 'Invalid data structure'}), 400
 
     clusters = perform_clustering(places, place_names, place_latlngs, user_preference)

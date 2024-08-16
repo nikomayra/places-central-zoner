@@ -1,12 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  Stack,
-  Divider,
-  Snackbar,
-  Alert,
-  CircularProgress,
-  Button,
-} from '@mui/material';
+import { Stack, Divider, Snackbar, Alert, Button } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import PlaceNamesInput from './components/PlaceNamesInput';
 import MapComponent from './components/MapComponent';
@@ -22,23 +15,7 @@ import { GoogleLogin, googleLogout } from '@react-oauth/google';
 //import axiosService from './services/axiosService';
 
 const App: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    console.log('App > Loading...');
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100px',
-        }}
-      >
-        <CircularProgress />
-      </div>
-    );
-  }
+  const { isAuthenticated } = useAuth();
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -119,7 +96,7 @@ const AuthenticatedApp: React.FC = () => {
         showAlert={showAlert}
       />
       {alert && (
-        <Snackbar open={!!alert} autoHideDuration={5000} onClose={hideAlert}>
+        <Snackbar open={!!alert} autoHideDuration={4000} onClose={hideAlert}>
           <Alert
             onClose={hideAlert}
             severity={alert.severity}
@@ -169,7 +146,12 @@ const GoogleLogoutButton: React.FC = () => {
 
   const handleLogout = () => {
     googleLogout();
-    logout();
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      console.error('No token found in session when trying to loggout!');
+      return;
+    }
+    logout(token);
   };
 
   return (

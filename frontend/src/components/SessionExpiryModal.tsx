@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import useAuth from '../hooks/useAuth';
-import storage from '../utils/storageUtil';
 import { Modal } from '@mui/material';
 import { GoogleLogin } from '@react-oauth/google';
 
@@ -12,7 +11,7 @@ const SessionExpiryModal: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const idToken = storage.getSessionItem('id_token');
+    const idToken = sessionStorage.getItem('id_token');
     if (!idToken || !tokenExp) return;
 
     const expTime = dayjs.unix(tokenExp); // Convert Unix timestamp to dayjs object
@@ -23,10 +22,6 @@ const SessionExpiryModal: React.FC = () => {
       if (now.isAfter(expTime.subtract(5, 'minute'))) {
         try {
           console.warn('Session is about to expire...');
-
-          // Need to handle session expiration...
-          // Maybe popup with warning and little google button from library.
-          // When pressed log them out and then log back in with the OnSuccess: stuff.
           setOpen(true);
         } catch (error) {
           console.error('Session extension failed', error);

@@ -1,6 +1,6 @@
-from flask import Flask
+from flask import Flask, Blueprint
 from flask_cors import CORS
-from app.extensions import db, migrate
+from app.extensions import db
 from app.blueprints import register_blueprints
 
 def create_app():

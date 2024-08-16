@@ -9,7 +9,6 @@ import {
 import axiosService from '../services/axiosService';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { PlaceLocation, Cluster } from '../interfaces/interfaces';
-import storage from '../utils/storageUtil';
 
 interface AnalyzeComponentProps {
   placeLocations: PlaceLocation[];
@@ -35,9 +34,9 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
   const handleAnalyze = async () => {
     try {
       setToggleAnalyzeProgressBar(true);
-      const idToken = storage.getSessionItem('id_token');
+      const idToken = sessionStorage.getItem('token');
       if (!idToken) {
-        console.error('No id_token found...');
+        console.error('No token found...');
         return;
       }
       const clusterResults = await axiosService.analyzePlaces(

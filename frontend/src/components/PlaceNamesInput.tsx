@@ -12,7 +12,6 @@ import {
 import { Delete } from '@mui/icons-material';
 import { PlaceLocation, LatLng } from '../interfaces/interfaces';
 import axiosService from '../services/axiosService';
-import storage from '../utils/storageUtil';
 
 interface PlaceNamesInputProps {
   setPlaceLocations: React.Dispatch<React.SetStateAction<PlaceLocation[]>>;
@@ -96,17 +95,38 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 
   const handleSearch = useCallback(async () => {
     try {
+      setToggleSearchProgessBar(true);
+      setPlaceLocations([]);
+
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        console.error('No token found...');
+        setToggleSearchProgessBar(false);
+        return;
+      }
+
+      // Ensure placeNames aren't blank and are greater than 2 characters long
+      if (placeNames.every((str) => str.length < 2)) {
+        showAlert(
+          'warning',
+          'Place names must be greater than 2 characters long.'
+        );
+        setToggleSearchProgessBar(false);
+        return;
+      }
+
       //Try to prevent very similar names prior to API calls.
       if (!verifyPlaceNames()) {
         showAlert('error', 'Very similar names not allowed.');
         return;
       }
 
-      // Rate limiting for search button
-      if (isButtonDisabled) {
-        showAlert('error', 'Too many requests. Please wait a moment.');
-        return;
-      }
+      const placeLocations: PlaceLocation[] = await axiosService.searchPlaces(
+        placeNames,
+        searchCenter,
+        searchRadius,
+        token
+      );
 
       setRequestCount((prevCount) => prevCount + 1);
 
@@ -116,20 +136,6 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         setRequestCount(0);
         setTimeout(() => setIsButtonDisabled(false), 60000);
       }
-
-      setToggleSearchProgessBar(true);
-      setPlaceLocations([]);
-      const idToken = storage.getSessionItem('id_token');
-      if (!idToken) {
-        console.error('No id_token found...');
-        return;
-      }
-      const placeLocations: PlaceLocation[] = await axiosService.searchPlaces(
-        placeNames,
-        searchCenter,
-        searchRadius,
-        idToken
-      );
 
       // If we ended up with less than 2 places error out..
       const placeCount: { [key: string]: number } =
@@ -153,7 +159,6 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     }
   }, [
     calculateNameCount,
-    isButtonDisabled,
     placeNames,
     requestCount,
     searchCenter,
@@ -237,7 +242,9 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         onClick={handleSearch}
         disabled={isButtonDisabled}
       >
-        Search
+        {isButtonDisabled
+          ? 'Search Disabled\n\nToo many requests, wait a moment.'
+          : 'Search'}
       </Button>
     </Box>
   );

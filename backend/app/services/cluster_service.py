@@ -5,8 +5,8 @@ from app.utils import haversine_distance
 
 def perform_clustering(places, place_names, place_latlngs, user_preference):
 
-    max_clusters = dynamic_max_clusters(len(place_latlngs), place_types)
     place_types = set(place_names)  # Collect unique place names
+    max_clusters = dynamic_max_clusters(len(place_latlngs), place_types)
     
     print('place_types: ', place_types)
     print('total_places: ', len(place_latlngs))

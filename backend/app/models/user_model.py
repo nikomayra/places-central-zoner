@@ -1,7 +1,8 @@
-from extensions import db
+# from app.extensions import db
 import datetime
 
-class User(db.Model):
+# db.Model
+class User():
     # id = db.Column(db.Integer, primary_key=True)
     # email = db.Column(db.String(120), unique=True, nullable=False)
     # name = db.Column(db.String(120), unique=False, nullable=False)
@@ -11,7 +12,6 @@ class User(db.Model):
 
     # Temporary variable for development prior to db
     id = 0
-    email = ''
-    name = ''
-    session_id = ''
-    session_expiration = datetime.utcnow()
+    searched_places = []
+    clusters = []
+    # session_expiration = datetime.datetime.now(datetime.UTC)

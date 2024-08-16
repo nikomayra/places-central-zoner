@@ -28,7 +28,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (token: string) => void;
-  logout: () => void;
+  logout: (token: string) => void;
   userName: string | null;
   tokenExp: number | null;
 }

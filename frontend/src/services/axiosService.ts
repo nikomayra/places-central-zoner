@@ -56,30 +56,30 @@ const refreshAuthToken = async (refreshToken: string) => {
   return res.data;
 }; */
 
-const authUser = async (id_token: string) => {
+const authSession = async (iDToken: string) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${id_token}`,
+      Authorization: `Bearer ${iDToken}`,
     },
   };
-  const res = await axios.post(`${baseUrl}/auth-user`, undefined, config);
+  const res = await axios.post(`${baseUrl}/auth-session`, undefined, config);
   return res.data;
 };
 
-const login = async (id_token: string) => {
+const login = async (iDToken: string) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${id_token}`,
+      Authorization: `Bearer ${iDToken}`,
     },
   };
   const res = await axios.post(`${baseUrl}/login`, undefined, config);
   return res.data;
 };
 
-const logout = async (session_id: string) => {
+const logout = async (iDToken: string) => {
   const config = {
     headers: {
-      SessionId: session_id,
+      Authorization: `Bearer ${iDToken}`,
     },
   };
   const res = await axios.post(`${baseUrl}/logout`, undefined, config);
@@ -91,5 +91,5 @@ export default {
   searchPlaces,
   login,
   logout,
-  authUser,
+  authSession,
 };
