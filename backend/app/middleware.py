@@ -3,8 +3,9 @@ from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 from functools import wraps
 import cachecontrol, requests, datetime
-from app.models.user_model import User
-from app.models.session_model import Session
+from app.models import User, Session
+from app.extensions import db
+import time
 
 # Cached session setup for Google token verification
 session = requests.session()
@@ -21,10 +22,11 @@ def session_required(f):
 
         try:
             user_info = id_token.verify_oauth2_token(token, request_adapter, current_app.config['GOOGLE_CLIENT_ID'])
-            # Temp code pre-DB
-            if (User.id != user_info['sub']): # If session of user.id doesn't exist
-                if(Session.expiration < datetime.datetime.now(datetime.UTC)):
-                    return jsonify({'authenticated': False,'message': 'Session expired or invalid'}), 401
+            
+            session_record = Session.query.filter_by(user_id=user_info['sub']).first()
+
+            if not session_record or session_record.expiration < int(time.time()):
+                return jsonify({'authenticated': False, 'message': 'Session expired or invalid'}), 401
 
         except ValueError as error:
             return jsonify({'authenticated': False,'message': 'Token is invalid or expired', 'error': str(error)}), 401

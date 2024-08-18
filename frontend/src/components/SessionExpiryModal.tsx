@@ -11,11 +11,11 @@ const SessionExpiryModal: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const idToken = sessionStorage.getItem('id_token');
+    const idToken = sessionStorage.getItem('token');
     if (!idToken || !tokenExp) return;
 
     const expTime = dayjs.unix(tokenExp); // Convert Unix timestamp to dayjs object
-
+    //console.log('expTime: ', expTime);
     const refreshInterval = setInterval(async () => {
       const now = dayjs();
       // Check if the token is about to expire (e.g., 5 minutes before)

@@ -23,22 +23,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (token: string) => {
     sessionStorage.setItem('token', token);
+    setLoading(true);
     try {
-      const { username, tokenExp } = await axiosService.login(token);
+      const { username, token_exp } = await axiosService.login(token);
       setUserName(username);
-      setTokenExp(parseInt(tokenExp));
+      setTokenExp(parseInt(token_exp));
       sessionStorage.setItem('userName', username);
-      sessionStorage.setItem('tokenExp', tokenExp);
+      sessionStorage.setItem('tokenExp', token_exp);
       setIsAuthenticated(true);
     } catch (err) {
       console.error('Failed to login (api)');
       setIsAuthenticated(false);
+      setLoading(false);
     }
     console.log('Logged in [authContext]');
+
+    setLoading(false);
   };
 
   const logout = async (token: string) => {
-    await axiosService.login(token);
+    await axiosService.logout(token);
     sessionStorage.removeItem('token');
     setIsAuthenticated(false);
     console.log('Logged out [authContext]');

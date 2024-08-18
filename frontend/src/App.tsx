@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Stack, Divider, Snackbar, Alert, Button } from '@mui/material';
+import {
+  Stack,
+  Divider,
+  Snackbar,
+  Alert,
+  Button,
+  //CircularProgress,
+} from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import PlaceNamesInput from './components/PlaceNamesInput';
 import MapComponent from './components/MapComponent';
@@ -121,7 +128,7 @@ const GoogleLoginButton: React.FC = () => {
       <h3>Sign in to access the App</h3>
       <GoogleLogin
         onSuccess={(credentialResponse) => {
-          console.log('Credential Response');
+          //console.log('Credential Response');
           credentialResponse.credential
             ? login(credentialResponse.credential)
             : console.error('ID_TOKEN returned undefined...');
