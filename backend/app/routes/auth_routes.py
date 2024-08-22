@@ -10,7 +10,7 @@ limiter.limit("5 per minute")(auth_bp)
 @auth_bp.route('/auth-session', methods=['POST'])
 @session_required
 def auth_session(user_info):
-    return jsonify({'message': f'Session is valid for {user_info['sub']}', 'authenticated': True})
+    return jsonify({'message': f'Session is valid for {user_info["sub"]}', 'authenticated': True})
 
 # Validates user's token then adds their session to the database
 @auth_bp.route('/login', methods=['POST'])

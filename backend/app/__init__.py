@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from app.extensions import db, migrate
 from app.blueprints import register_blueprints
@@ -22,10 +22,9 @@ def create_app():
     # Register blueprints
     register_blueprints(app)
 
-    # if needed....
-    # @app.route('/', defaults={'path': ''})
-    # @app.route('/<path:path>')
-    # def catch_all(path):
-    #     return 'You want path: %s' % path
+    @app.route('/')
+    @app.route('/<path:path>')
+    def serve_static(path='index.html'):
+        return send_from_directory(app.static_folder, path)
     
     return app
