@@ -10,7 +10,7 @@ def create_app():
     # static_folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'dist'))
     app = Flask(__name__, static_folder="../dist")
     CORS(app)
-    print('app.static_folder', app.static_folder)
+    # print('app.static_folder', app.static_folder)
     # Load configuration
     app.config.from_object(Config)
     
