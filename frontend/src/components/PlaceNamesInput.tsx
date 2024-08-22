@@ -90,10 +90,10 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     return true;
   }, [levenshtein, placeNames]);
 
-  // 5 requests/min limit
+  // 5 req/min MAX, 2 MIN (separate google API calls for each place)
   const rateLimiter = useCallback(() => {
     setRequestCount((prevCount) => prevCount + 1);
-    const limit = Math.floor(6 / Object.entries(nameCount).length);
+    const limit = Math.floor(10 / Object.entries(nameCount).length);
     if (requestCount > limit) {
       setIsButtonDisabled(true);
       setRequestCount(0);

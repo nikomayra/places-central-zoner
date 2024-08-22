@@ -33,10 +33,10 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
   const [requestCount, setRequestCount] = useState(0);
   const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(false);
 
-  // 20 requests/min limit
+  // 19 requests/min limit
   const rateLimiter = useCallback(() => {
     setRequestCount((prevCount) => prevCount + 1);
-    const limit = 20;
+    const limit = 19;
     if (requestCount > limit) {
       setIsButtonDisabled(true);
       setRequestCount(0);

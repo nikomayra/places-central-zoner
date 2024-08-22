@@ -12,3 +12,5 @@ class Config:
     REDIRECT_URI = os.getenv('REDIRECT_URI')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    RATELIMIT_STORAGE_URL = REDIS_URL
