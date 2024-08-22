@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   TextField,
   Button,
@@ -14,6 +14,7 @@ import { PlaceLocation, LatLng } from '../interfaces/interfaces';
 import axiosService from '../services/axiosService';
 
 interface PlaceNamesInputProps {
+  placeLocations: PlaceLocation[];
   setPlaceLocations: React.Dispatch<React.SetStateAction<PlaceLocation[]>>;
   searchCenter: LatLng;
   searchRadius: number;
@@ -24,6 +25,7 @@ interface PlaceNamesInputProps {
 }
 
 const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
+  placeLocations,
   setPlaceLocations,
   searchCenter,
   searchRadius,
@@ -55,7 +57,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     return matrix[a.length - 1][b.length - 1];
   }, []);
 
-  const calculateNameCount = useCallback(
+  /*  const calculateNameCount = useCallback(
     (places: PlaceLocation[]): { [key: string]: number } => {
       // Count occurrences of each place name
       const nameCount: { [key: string]: number } = {};
@@ -70,7 +72,19 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
       return nameCount;
     },
     []
-  );
+  ); */
+
+  useEffect(() => {
+    const nameCounts: { [key: string]: number } = {};
+    placeLocations.forEach((place) => {
+      const name = place.name;
+      if (!nameCounts[name]) {
+        nameCounts[name] = 0;
+      }
+      nameCounts[name]++;
+    });
+    setNameCount(nameCounts);
+  }, [placeLocations]);
 
   const verifyPlaceNames = useCallback((): boolean => {
     // make sure place names input aren't too similar
@@ -92,6 +106,17 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     }
     return true;
   }, [levenshtein, placeNames]);
+
+  const rateLimiter = useCallback(() => {
+    setRequestCount((prevCount) => prevCount + 1);
+
+    // 5 requests/min limit
+    if (requestCount >= 5) {
+      setIsButtonDisabled(true);
+      setRequestCount(0);
+      setTimeout(() => setIsButtonDisabled(false), 60000);
+    }
+  }, [requestCount]);
 
   const handleSearch = useCallback(async () => {
     try {
@@ -121,27 +146,21 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         return;
       }
 
-      const placeLocations: PlaceLocation[] = await axiosService.searchPlaces(
-        placeNames,
-        searchCenter,
-        searchRadius,
-        token
+      const placeLocationsServer: PlaceLocation[] =
+        await axiosService.searchPlaces(
+          placeNames,
+          searchCenter,
+          searchRadius,
+          token
+        );
+
+      rateLimiter();
+
+      const uniqueNames = new Set(
+        placeLocationsServer.map((place) => place.name)
       );
 
-      setRequestCount((prevCount) => prevCount + 1);
-
-      // 5 requests/min limit
-      if (requestCount >= 5) {
-        setIsButtonDisabled(true);
-        setRequestCount(0);
-        setTimeout(() => setIsButtonDisabled(false), 60000);
-      }
-
-      // If we ended up with less than 2 places error out..
-      const placeCount: { [key: string]: number } =
-        calculateNameCount(placeLocations);
-
-      if (Object.entries(placeCount).length < 2) {
+      if (uniqueNames.size < 2) {
         showAlert('error', 'Fail: Less than 2 places found.');
         setToggleSearchProgessBar(false);
         return;
@@ -149,18 +168,16 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
 
       setToggleSearchProgessBar(false);
       showAlert('success', 'Search completed successfully!');
-      console.log('Saved - placeLocations: ', placeLocations);
-      setPlaceLocations(placeLocations);
-      setNameCount(placeCount);
+      //console.log('Saved - placeLocations: ', placeLocations);
+      setPlaceLocations(placeLocationsServer);
     } catch (error) {
       console.error('Error during search:', error);
       showAlert('error', 'Search failed.');
       setToggleSearchProgessBar(false);
     }
   }, [
-    calculateNameCount,
     placeNames,
-    requestCount,
+    rateLimiter,
     searchCenter,
     searchRadius,
     setPlaceLocations,

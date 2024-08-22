@@ -32,7 +32,7 @@ def calculate_bounding_box(center, radius):
 
     # Latitude delta
     lat_delta = radius_in_km / earth_radius
-    lat_delta_deg = math.degrees(lat_delta) * .9 #10% smaller to closer match the circle
+    lat_delta_deg = math.degrees(lat_delta) * .8 #10% smaller to closer match the circle
 
     # Longitude delta, compensate for shrinking earth radius in latitude
     lng_delta_deg = math.degrees(radius_in_km / (earth_radius * math.cos(math.radians(lat))))

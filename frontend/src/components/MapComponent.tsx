@@ -337,12 +337,14 @@ const MapComponent: React.FC<MapComponentProps> = ({
           width: '100%',
           aspectRatio: '1/1',
         }}
-        defaultBounds={{
+        /* defaultBounds={{
           east: -33.6546303,
           north: -70.8298707,
           south: -70.8394937,
           west: -33.3328737,
-        }}
+        }} */
+        defaultCenter={searchCenter}
+        defaultZoom={10}
         gestureHandling={'greedy'}
         disableDefaultUI={true}
         zoomControl={false}

@@ -8,8 +8,8 @@ auth_bp = Blueprint('auth', __name__)
 # Authenticates user's session, if unique session id exists in database & not expired.
 @auth_bp.route('/auth-session', methods=['POST'])
 @session_required
-def auth_session():
-    return jsonify({'message': 'Session is valid', 'authenticated': True})
+def auth_session(user_info):
+    return jsonify({'message': f'Session is valid for {user_info['sub']}', 'authenticated': True})
 
 # Validates user's token then adds their session to the database
 @auth_bp.route('/login', methods=['POST'])

@@ -2,6 +2,8 @@ from flask import jsonify
 from app.services.search_service import perform_search
 from app.services.cluster_service import perform_clustering
 import numpy as np
+from app.models import User
+from app.extensions import db
 
 MILES_TO_METERS = 1609.34
 
@@ -9,7 +11,7 @@ MILES_TO_METERS = 1609.34
     # data:  {'placeNames': ['starbucks', 'chipotle'], 
     # 'searchCenter': {'lat': 47.608013, 'lng': -122.335167}, 
     # 'searchRadius': 5}
-def search_places(request):
+def search_places(user_info, request):
     search_params = request.json
     if not search_params:
         return jsonify({'error': 'No data provided'}), 400
@@ -23,6 +25,16 @@ def search_places(request):
         return jsonify({'error': 'Invalid data structure'}), 400
 
     results = perform_search(placeNames, searchCenter, searchRadius, maxPageResults)
+
+    user = User.query.filter_by(id=user_info['sub']).first()
+
+    if user:
+        user.searched_places = results
+        user.search_center = searchCenter
+        user.search_radius = search_params.get('searchRadius')
+        user.clusters = [] # Clear clusters which were analyzed to the previous data
+        db.session.commit()
+
     return jsonify(results), 200
 
 # Example places structure:
@@ -36,7 +48,7 @@ def search_places(request):
 # ]
 # Example user_preference structure:
 # -2, -1, 0, 1, 2 (One of them)
-def cluster_data(request):
+def cluster_data(user_info, request):
     places = request.json
     if not places:
         return jsonify({'error': 'No places provided'}), 400
@@ -50,4 +62,18 @@ def cluster_data(request):
         return jsonify({'error': 'Invalid data structure'}), 400
 
     clusters = perform_clustering(places, place_names, place_latlngs, user_preference)
+
+    user = User.query.filter_by(id=user_info['sub']).first()
+
+    if user:
+        user.clusters = clusters
+        db.session.commit()
+
     return jsonify(clusters), 200
+
+def latest_state(user_info):
+    user = User.query.filter_by(id=user_info['sub']).first()
+    if user:
+        return jsonify({'clusters_state':user.clusters, 'searched_places_state':user.searched_places, 'center_state':user.search_center, 'radius_state':user.search_radius}), 200
+    else:
+        return jsonify({'error': 'User not found; no previous state.'}), 400

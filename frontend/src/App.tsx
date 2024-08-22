@@ -19,6 +19,7 @@ import useAuth from './hooks/useAuth';
 import SessionExpiryModal from './components/SessionExpiryModal';
 import { PlaceLocation, LatLng, Cluster } from './interfaces/interfaces';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
+import axiosService from './services/axiosService';
 //import axiosService from './services/axiosService';
 
 const App: React.FC = () => {
@@ -66,9 +67,37 @@ const AuthenticatedApp: React.FC = () => {
   );
   const memoizedClusters = useMemo(() => clusters, [clusters]);
 
-  useEffect(() => {
+  /*   useEffect(() => {
     setClusters([]);
-  }, [placeLocations]);
+  }, [placeLocations]); */
+
+  useEffect(() => {
+    // loadLatestPlaces();
+    // loadLatestClusters();
+    loadLatestState();
+  }, []);
+
+  const loadLatestState = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (token) {
+        const {
+          clusters_state,
+          searched_places_state,
+          center_state,
+          radius_state,
+        } = await axiosService.latestState(token);
+        setPlaceLocations(searched_places_state);
+        setClusters(clusters_state);
+        setSearchCenter(center_state);
+        setSearchRadius(radius_state);
+      } else {
+        console.error("Token not found, can't load last state.");
+      }
+    } catch (error) {
+      console.error('Failed to load state from server.');
+    }
+  };
 
   return (
     <>
@@ -85,6 +114,7 @@ const AuthenticatedApp: React.FC = () => {
           showAlert={showAlert}
         />
         <PlaceNamesInput
+          placeLocations={placeLocations}
           setPlaceLocations={setPlaceLocations}
           searchCenter={searchCenter}
           searchRadius={searchRadius}

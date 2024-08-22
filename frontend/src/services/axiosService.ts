@@ -8,7 +8,7 @@ const searchPlaces = async (
   placeNames: string[],
   searchCenter: LatLng,
   searchRadius: number,
-  id_token: string
+  token: string
 ) => {
   const data = {
     placeNames: placeNames,
@@ -18,7 +18,7 @@ const searchPlaces = async (
   const res = await axios.post(`${baseUrl}/search-places`, data, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${id_token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
   return res.data;
@@ -27,14 +27,14 @@ const searchPlaces = async (
 const analyzePlaces = async (
   placeLocations: PlaceLocation[],
   userPreference: number,
-  id_token: string
+  token: string
 ) => {
   //console.log('/cluster - placeLocations: ', placeLocations);
   const res = await axios.post(`${baseUrl}/cluster`, placeLocations, {
     headers: {
       'Content-Type': 'application/json',
       'User-Preference': userPreference,
-      Authorization: `Bearer ${id_token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
   return res.data;
@@ -56,33 +56,43 @@ const refreshAuthToken = async (refreshToken: string) => {
   return res.data;
 }; */
 
-const authSession = async (iDToken: string) => {
+const authSession = async (token: string) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${iDToken}`,
+      Authorization: `Bearer ${token}`,
     },
   };
   const res = await axios.post(`${baseUrl}/auth-session`, undefined, config);
   return res.data;
 };
 
-const login = async (iDToken: string) => {
+const login = async (token: string) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${iDToken}`,
+      Authorization: `Bearer ${token}`,
     },
   };
   const res = await axios.post(`${baseUrl}/login`, undefined, config);
   return res.data;
 };
 
-const logout = async (iDToken: string) => {
+const logout = async (token: string) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${iDToken}`,
+      Authorization: `Bearer ${token}`,
     },
   };
   const res = await axios.post(`${baseUrl}/logout`, undefined, config);
+  return res.data;
+};
+
+const latestState = async (token: string) => {
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+  const res = await axios.get(`${baseUrl}/latest-state`, config);
   return res.data;
 };
 
@@ -92,4 +102,5 @@ export default {
   login,
   logout,
   authSession,
+  latestState,
 };

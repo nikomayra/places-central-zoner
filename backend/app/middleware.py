@@ -31,5 +31,5 @@ def session_required(f):
         except ValueError as error:
             return jsonify({'authenticated': False,'message': 'Token is invalid or expired', 'error': str(error)}), 401
 
-        return f(*args, **kwargs)
+        return f(user_info, *args, **kwargs)
     return session_authenticator
