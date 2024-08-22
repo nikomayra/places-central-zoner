@@ -32,7 +32,7 @@ def logout_user(request):
         user_info = id_token.verify_oauth2_token(token, request_adapter, current_app.config['GOOGLE_CLIENT_ID'])
         removed = remove_session(user_info['jti'])
         if not removed:
-            return jsonify({'message': f'Session {user_info['jti']} not found in database.'}), 401
+            return jsonify({'message': f'Session {user_info["jti"]} not found in database.'}), 401
         return jsonify({'message': 'User logged out; session closed.'}), 200
     except ValueError as error:
         return jsonify({'message': 'Token is invalid or expired', 'error': str(error)}), 401
