@@ -4,11 +4,13 @@ from app.extensions import db, migrate
 from app.blueprints import register_blueprints
 from .config import Config
 from app.limiter import create_limiter
+import os
 
 def create_app():
-    app = Flask(__name__, static_folder='../dist')
+    # static_folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'dist'))
+    app = Flask(__name__, static_folder="../dist")
     CORS(app)
-    
+    print('app.static_folder', app.static_folder)
     # Load configuration
     app.config.from_object(Config)
     
