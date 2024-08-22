@@ -14,7 +14,6 @@ Thumbs.db
 
 # Ignore build output
 **/build/
-**/dist/
 
 # Ignore environment variables
 **/.env
