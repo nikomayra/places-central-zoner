@@ -6,7 +6,7 @@ from .config import Config
 from app.limiter import create_limiter
 
 def create_app():
-    app = Flask(__name__, static_folder='dist')
+    app = Flask(__name__, static_folder='../dist')
     CORS(app)
     
     # Load configuration
