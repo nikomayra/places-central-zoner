@@ -33,7 +33,7 @@ def create_app():
     limiter = Limiter(
         get_remote_address,
         app=app,
-        storage_uri=app.config['RATELIMIT_STORAGE_URL']
+        storage_uri=app.config['RATELIMIT_STORAGE_URL'}
     )
 
     # @app.route('/', defaults={'path': ''})
