@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Slider, Box, Tooltip, TextField } from '@mui/material';
 import { TrackChanges } from '@mui/icons-material';
 import {
@@ -91,6 +91,20 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const requestCountRef = useRef<number>(0);
   const previousValueRef = useRef<string>('');
 
+  // 30 characters/min autocomplete
+  const rateLimiter = useCallback(() => {
+    requestCountRef.current += 1;
+
+    if (requestCountRef.current >= 30) {
+      setIsInputDisabled(true);
+      showAlert('error', 'Too many requests. Please wait a moment.');
+      setTimeout(() => {
+        setIsInputDisabled(false);
+        requestCountRef.current = 0;
+      }, 60000);
+    }
+  }, [showAlert]);
+
   // Effect to initialize autocomplete and handle place selection
   useEffect(() => {
     if (!places || !inputRef.current) return;
@@ -120,8 +134,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
       previousValueRef.current = currentValue;
 
       if (isInputDisabled) return;
+      rateLimiter();
 
-      requestCountRef.current += 1;
+      /* requestCountRef.current += 1;
 
       if (requestCountRef.current >= 13) {
         setIsInputDisabled(true);
@@ -130,7 +145,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           setIsInputDisabled(false);
           requestCountRef.current = 0;
         }, 60000);
-      }
+      }*/
     };
 
     // Initialize autocomplete only if it's not already initialized
@@ -150,7 +165,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       // Add an event listener for input changes to count requests
       inputRef.current.addEventListener('input', handleInput);
     }
-  }, [isInputDisabled, places, setSearchCenter, showAlert]);
+  }, [isInputDisabled, places, rateLimiter, setSearchCenter, showAlert]);
 
   // Effect to adjust map bounds based on the search center and radius
   useEffect(() => {

@@ -57,23 +57,6 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     return matrix[a.length - 1][b.length - 1];
   }, []);
 
-  /*  const calculateNameCount = useCallback(
-    (places: PlaceLocation[]): { [key: string]: number } => {
-      // Count occurrences of each place name
-      const nameCount: { [key: string]: number } = {};
-      places.forEach((place) => {
-        const name = place.name;
-        if (!nameCount[name]) {
-          nameCount[name] = 0;
-        }
-        nameCount[name]++;
-      });
-      //console.log('nameCount: ', nameCount);
-      return nameCount;
-    },
-    []
-  ); */
-
   useEffect(() => {
     const nameCounts: { [key: string]: number } = {};
     placeLocations.forEach((place) => {
@@ -107,16 +90,16 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     return true;
   }, [levenshtein, placeNames]);
 
+  // 5 requests/min limit
   const rateLimiter = useCallback(() => {
     setRequestCount((prevCount) => prevCount + 1);
-
-    // 5 requests/min limit
-    if (requestCount >= 5) {
+    const limit = Math.floor(6 / Object.entries(nameCount).length);
+    if (requestCount > limit) {
       setIsButtonDisabled(true);
       setRequestCount(0);
       setTimeout(() => setIsButtonDisabled(false), 60000);
     }
-  }, [requestCount]);
+  }, [nameCount, requestCount]);
 
   const handleSearch = useCallback(async () => {
     try {

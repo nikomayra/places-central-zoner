@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -30,6 +30,19 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
 }) => {
   const [toggleAnalyzeProgressBar, setToggleAnalyzeProgressBar] =
     useState(false);
+  const [requestCount, setRequestCount] = useState(0);
+  const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(false);
+
+  // 20 requests/min limit
+  const rateLimiter = useCallback(() => {
+    setRequestCount((prevCount) => prevCount + 1);
+    const limit = 20;
+    if (requestCount > limit) {
+      setIsButtonDisabled(true);
+      setRequestCount(0);
+      setTimeout(() => setIsButtonDisabled(false), 60000);
+    }
+  }, [requestCount]);
 
   const handleAnalyze = async () => {
     try {
@@ -44,6 +57,9 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
         preference,
         idToken
       );
+
+      rateLimiter();
+
       if (clusterResults.length <= 0) {
         showAlert(
           'warning',
@@ -94,8 +110,15 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
           </FixedSizeList>
         )}
       {toggleAnalyzeProgressBar && <LinearProgress color='warning' />}
-      <Button variant='contained' color='warning' onClick={handleAnalyze}>
-        Analyze
+      <Button
+        variant='contained'
+        color='warning'
+        onClick={handleAnalyze}
+        disabled={isButtonDisabled}
+      >
+        {isButtonDisabled
+          ? 'Analyze Disabled\n\nToo many requests, wait a moment.'
+          : 'Analyze'}
       </Button>
     </Box>
   );
