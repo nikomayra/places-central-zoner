@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify, request
 from app.controllers.auth_controller import login_user, logout_user
 from app.middleware import session_required
-from app import limiter
+from app.limiter import limiter
 
 auth_bp = Blueprint('auth', __name__)
-limiter.limit("25 per minute")(auth_bp)
+limiter.limit("5 per minute")(auth_bp)
 
 # Authenticates user's session, if unique session id exists in database & not expired.
 @auth_bp.route('/auth-session', methods=['POST'])

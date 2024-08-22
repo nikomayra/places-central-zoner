@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 from app.controllers.data_controller import search_places, cluster_data, latest_state
 from app.middleware import session_required
-from app import limiter
+from app.limiter import limiter
 
 data_bp = Blueprint('data', __name__)
 

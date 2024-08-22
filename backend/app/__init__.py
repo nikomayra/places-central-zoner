@@ -3,38 +3,24 @@ from flask_cors import CORS
 from app.extensions import db, migrate
 from app.blueprints import register_blueprints
 from .config import Config
-from redis import Redis
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-redis_connection = None
-limiter = None
+from app.limiter import create_limiter
 
 def create_app():
     app = Flask(__name__, static_folder='dist')
     CORS(app)
-
+    
     # Load configuration
     app.config.from_object(Config)
     
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # Init limiter
+    create_limiter(app)
     
     # Register blueprints
     register_blueprints(app)
-
-    # Initialize Redis connection
-    global redis_connection
-    redis_connection = Redis.from_url(app.config['REDIS_URL'])
-
-    # Initialize Flask-Limiter with Redis as storage
-    global limiter
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        storage_uri=app.config['RATELIMIT_STORAGE_URL']
-    )
 
     # if needed....
     # @app.route('/', defaults={'path': ''})
