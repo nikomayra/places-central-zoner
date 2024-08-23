@@ -49,4 +49,6 @@ Places Central Zoner is a simple web application that finds central locations wh
 ## Potential future improvements
 
 - Update to Autocomplete from Places (NEW) using "Data API" & Sessions.
+- Add debounce between text field inputs and actual Autocomplete API calls. Only search once a few letters have been typed to save calls. Would need to use webservice version of Autocomplete with lots of logic. New component.
 - Use vanilla google Maps JS instead of vis.gl library stuff.
+- Return the next best cluster/zone if none pass the evaluation function - also notify the user somehow.
