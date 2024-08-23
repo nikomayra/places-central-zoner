@@ -25,7 +25,7 @@ Places Central Zoner is a simple web application that finds central locations wh
    - Implement UI/UX elements for visibility, readability, useability.
    - Implement data UI elements for greater understanding of results.
 
-2. (85%) Backend Development:
+2. (95%) Backend Development:
 
    - Set up a Flask project.
    - Implement logic to calculate the central minimum locations based on store distances.
@@ -38,11 +38,11 @@ Places Central Zoner is a simple web application that finds central locations wh
    - Calculate the central points and draw circles representing the radius to the farthest store.
    - Use Google Maps API for drawing central zone markers
 
-4. (5%) Implement OAuth and any other protection to avoid unnecessary Google API calls.
+4. (95%) Implement OAuth and any other protection to avoid unnecessary Google API calls.
 
-5. (60%) Use complete app and then adjust as needed...test/fix/etc.
+5. (90%) Use complete app and then adjust as needed...test/fix/etc.
 
-6. (0%) Deployment:
+6. (95%) Deployment:
    - Containerize the application using Docker (optional but recommended).
    - Deploy the application to Render.com, ensuring the database is configured correctly.
 
