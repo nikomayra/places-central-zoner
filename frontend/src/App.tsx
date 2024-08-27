@@ -60,6 +60,7 @@ const AuthenticatedApp: React.FC = () => {
   const [placeLocations, setPlaceLocations] = useState<PlaceLocation[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [preference, setPreference] = useState<number>(0);
+  const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
 
   const memoizedPlaceLocations = useMemo(
     () => placeLocations,
@@ -67,9 +68,9 @@ const AuthenticatedApp: React.FC = () => {
   );
   const memoizedClusters = useMemo(() => clusters, [clusters]);
 
-  /*   useEffect(() => {
+  useEffect(() => {
     setClusters([]);
-  }, [placeLocations]); */
+  }, [placeLocations]);
 
   useEffect(() => {
     // loadLatestPlaces();
@@ -82,13 +83,13 @@ const AuthenticatedApp: React.FC = () => {
       const token = sessionStorage.getItem('token');
       if (token) {
         const {
-          clusters_state,
+          //clusters_state,
           searched_places_state,
           center_state,
           radius_state,
         } = await axiosService.latestState(token);
         setPlaceLocations(searched_places_state);
-        setClusters(clusters_state);
+        //setClusters(clusters_state);
         setSearchCenter(center_state);
         setSearchRadius(radius_state);
       } else {
@@ -112,6 +113,8 @@ const AuthenticatedApp: React.FC = () => {
           setSearchRadius={setSearchRadius}
           clusters={memoizedClusters}
           showAlert={showAlert}
+          placeColors={placeColors}
+          setPlaceColors={setPlaceColors}
         />
         <PlaceNamesInput
           placeLocations={placeLocations}
@@ -119,6 +122,7 @@ const AuthenticatedApp: React.FC = () => {
           searchCenter={searchCenter}
           searchRadius={searchRadius}
           showAlert={showAlert}
+          placeColors={placeColors}
         />
       </APIProvider>
       <PreferenceComponent

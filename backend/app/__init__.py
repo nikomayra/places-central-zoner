@@ -4,7 +4,6 @@ from app.extensions import db, migrate
 from app.blueprints import register_blueprints
 from .config import Config
 from app.limiter import create_limiter
-import os
 
 def create_app():
     # static_folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'dist'))

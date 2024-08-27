@@ -1,8 +1,8 @@
-"""Create tables
+"""Init Database
 
-Revision ID: ed0c075ede6f
+Revision ID: f8e2adaa97ff
 Revises: 
-Create Date: 2024-08-17 16:32:22.520715
+Create Date: 2024-08-26 13:01:37.893769
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'ed0c075ede6f'
+revision = 'f8e2adaa97ff'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,14 +21,15 @@ def upgrade():
     op.create_table('user',
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('searched_places', sa.JSON(), nullable=False),
-    sa.Column('clusters', sa.JSON(), nullable=False),
+    sa.Column('search_center', sa.JSON(), nullable=False),
+    sa.Column('search_radius', sa.Integer(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('id')
     )
     op.create_table('session',
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
-    sa.Column('expiration', sa.DateTime(), nullable=False),
+    sa.Column('expiration', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('id')

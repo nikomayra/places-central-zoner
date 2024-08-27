@@ -20,6 +20,10 @@ interface MapComponentProps {
     severity: 'success' | 'info' | 'warning' | 'error',
     message: string
   ) => void;
+  placeColors: { [key: string]: string };
+  setPlaceColors: React.Dispatch<
+    React.SetStateAction<{ [key: string]: string }>
+  >;
 }
 
 // 1609.34 meters = 1 mile
@@ -78,13 +82,15 @@ const MapComponent: React.FC<MapComponentProps> = ({
   setSearchRadius,
   clusters,
   showAlert,
+  placeColors,
+  setPlaceColors,
 }) => {
   const map = useMap();
   const circleRef = useRef<google.maps.Circle | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const places = useMapsLibrary('places');
-  const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
+  //const [placeColors, setPlaceColors] = useState<{ [key: string]: string }>({});
   const circlesRef = useRef<google.maps.Circle[]>([]);
   const [calculatedMarkers, setCalculatedMarkers] = useState<JSX.Element[]>([]);
   const [isInputDisabled, setIsInputDisabled] = useState<boolean>(false);
@@ -238,7 +244,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     ) {
       setPlaceColors(newPlaceColors);
     }
-  }, [placeLocations, placeColors]);
+  }, [placeLocations, placeColors, setPlaceColors]);
 
   // Effect to render circles for clusters
   useEffect(() => {

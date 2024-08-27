@@ -8,6 +8,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { PlaceLocation, LatLng } from '../interfaces/interfaces';
@@ -22,6 +23,7 @@ interface PlaceNamesInputProps {
     severity: 'success' | 'info' | 'warning' | 'error',
     message: string
   ) => void;
+  placeColors: { [key: string]: string };
 }
 
 const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
@@ -30,6 +32,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   searchCenter,
   searchRadius,
   showAlert,
+  placeColors,
 }) => {
   const [toggleSearchProgessBar, setToggleSearchProgessBar] = useState(false);
   const [placeNames, setPlaceNames] = useState<string[]>(['', '']);
@@ -203,6 +206,17 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         >
           {Object.entries(nameCount).map(([place, count], index) => (
             <ListItem key={`nameCount - ${index}`}>
+              <ListItemIcon>
+                <div
+                  style={{
+                    width: '15px',
+                    height: '15px',
+                    borderRadius: '50%',
+                    backgroundColor: placeColors[place],
+                    zIndex: 1000,
+                  }}
+                />
+              </ListItemIcon>
               <ListItemText primary={place} secondary={`Count: ${count}`} />
             </ListItem>
           ))}

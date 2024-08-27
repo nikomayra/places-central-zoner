@@ -155,6 +155,7 @@ def small_dataset_clustering(coords, places, place_types):
 # Function to evaluate clusters based on wcss
 def evaluate_clusters(clusters, preference):
     valid_clusters = []
+    failed_clusters = []
     total_wcss = 0
     count_valid = 0
     wcss_threshold = .0006 - (.0003 * preference) # 0 -> .0012
@@ -181,8 +182,23 @@ def evaluate_clusters(clusters, preference):
             })
             total_wcss += wcss
             count_valid += 1
+        else:
+            failed_clusters.append({
+                'cluster': i,
+                'places': cluster,
+                'wcss': wcss,
+                'center': center,
+                'radius': radius
+            })
 
     valid_clusters.sort(key=lambda x: x['wcss']) #sort in ascending order by wcss
+
+    # If user set lowest quality setting and still didn't find any valid clusters return the next best...
+    if wcss_threshold >= .0012 and len(valid_clusters) <= 0:
+        failed_clusters.sort(key=lambda x: x['wcss'])
+        valid_clusters.append(failed_clusters[0])
+        total_wcss = valid_clusters[0]['wcss']
+        count_valid = 1
 
     avg_wcss = total_wcss / count_valid if count_valid > 0 else float('inf')
 
@@ -191,5 +207,5 @@ def evaluate_clusters(clusters, preference):
         combined_metric =  count_valid
     else:
         combined_metric = (count_valid / avg_wcss)
-
+    # print("valid_clusters", valid_clusters)
     return valid_clusters, combined_metric

@@ -1,0 +1,11 @@
+POST http://127.0.0.1:5000/api/search-places
+Content-Type: application/json
+
+{
+    "placeNames": ["publix", "walmarto", "LA Fitness"],
+    "searchCenter": {
+        "lat": 29.655992,
+        "lng": -82.326784
+    },
+    "searchRadius": 5
+}
