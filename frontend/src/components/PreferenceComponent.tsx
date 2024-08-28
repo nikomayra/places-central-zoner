@@ -42,19 +42,19 @@ const PreferenceComponent: React.FC<PreferenceToggleProps> = ({
         sx={{ justifyContent: 'center' }}
         fullWidth={true}
       >
-        <ToggleButton value={-2} aria-label='-2'>
+        <ToggleButton value={1} aria-label='1'>
           <h3 style={{ margin: '0' }}>--</h3>
         </ToggleButton>
-        <ToggleButton value={-1} aria-label='-1'>
+        <ToggleButton value={0.75} aria-label='.75'>
           <h3 style={{ margin: '0' }}>-</h3>
         </ToggleButton>
-        <ToggleButton value={0} aria-label='0'>
+        <ToggleButton value={0.5} aria-label='.5'>
           <h3 style={{ margin: '0' }}>o</h3>
         </ToggleButton>
-        <ToggleButton value={1} aria-label='1'>
+        <ToggleButton value={0.25} aria-label='.25'>
           <h3 style={{ margin: '0' }}>+</h3>
         </ToggleButton>
-        <ToggleButton value={2} aria-label='2'>
+        <ToggleButton value={0} aria-label='0'>
           <h3 style={{ margin: '0' }}>++</h3>
         </ToggleButton>
       </ToggleButtonGroup>
