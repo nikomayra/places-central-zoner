@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:ui": "powershell -Command \"Remove-Item -Recurse -Force ../backend/dist; cd ../frontend; npm run build; Copy-Item -Path dist -Destination ../backend -Recurse -Force\"",
-    "deploy:full": "npm run build:ui && cd ../backend && git add . && git commit -m 'uibuild' || echo 'No changes to commit' && git push",
+    "deploy:full": "npm run build:ui ; if ($?) {cd ../backend ; git add . ; git commit -m 'uibuild' ; git push} else {echo 'Build failed. Skipping Git operations.'}",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },

@@ -321,19 +321,19 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   return (
     <Box display='flex' flexDirection='column' gap={2}>
-      <Box display='flex' flexDirection='row' gap={2}>
+      <Box display='flex' flexDirection='row' gap={2} flexGrow={1}>
         <TextField
           inputRef={inputRef}
           label={`Search Center`}
           variant='outlined'
-          style={{ flexGrow: 0.3 }}
+          style={{ width: '50%' }}
           disabled={isInputDisabled}
         />
         <Box
           display='flex'
           flexDirection='row'
           gap={1}
-          style={{ flexGrow: 1, alignItems: 'center' }}
+          style={{ width: '50%', alignItems: 'center' }}
         >
           <Tooltip title='Search Area Bias (miles)'>
             <TrackChanges style={{ flexGrow: 0 }} />
