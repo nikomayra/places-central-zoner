@@ -158,7 +158,10 @@ def evaluate_clusters(clusters, preference):
     failed_clusters = []
     total_wcss = 0
     count_valid = 0
-    wcss_threshold = .0006 - (.0003 * preference) # 0 -> .0012
+    min_value = .00002
+    max_value = .002
+    # wcss_threshold = .0006 - (.00029 * preference) # 0 -> .0012
+    wcss_threshold = min_value + (max_value - min_value) * preference
     print('wcss_threshold',wcss_threshold)
 
     # Helper function to create a unique identifier for a cluster based on its points
@@ -194,7 +197,7 @@ def evaluate_clusters(clusters, preference):
     valid_clusters.sort(key=lambda x: x['wcss']) #sort in ascending order by wcss
 
     # If user set lowest quality setting and still didn't find any valid clusters return the next best...
-    if wcss_threshold >= .0012 and len(valid_clusters) <= 0:
+    if wcss_threshold == min_value and len(valid_clusters) <= 0 and len(failed_clusters) > 0:
         failed_clusters.sort(key=lambda x: x['wcss'])
         valid_clusters.append(failed_clusters[0])
         total_wcss = valid_clusters[0]['wcss']

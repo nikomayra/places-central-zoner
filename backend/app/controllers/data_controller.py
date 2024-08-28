@@ -47,13 +47,13 @@ def search_places(user_info, request):
 #     ...
 # ]
 # Example user_preference structure:
-# -2, -1, 0, 1, 2 (One of them)
+# 0, .25, .5, .75, 1 (One of them)
 def cluster_data(user_info, request):
     places = request.json
     if not places:
         return jsonify({'error': 'No places provided'}), 400
-    user_preference = int(request.headers.get('User-Preference'))
-
+    user_preference = float(request.headers.get('User-Preference'))
+    
     # Extract place data
     place_names = [place['name'] for place in places]
     place_latlngs = np.array([[place['lat'], place['lng']] for place in places])
