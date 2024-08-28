@@ -11,12 +11,13 @@ import {
   ListItemIcon,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
-import { PlaceLocation, LatLng } from '../interfaces/interfaces';
+import { PlaceLocation, LatLng, Cluster } from '../interfaces/interfaces';
 import axiosService from '../services/axiosService';
 
 interface PlaceNamesInputProps {
   placeLocations: PlaceLocation[];
   setPlaceLocations: React.Dispatch<React.SetStateAction<PlaceLocation[]>>;
+  setClusters: React.Dispatch<React.SetStateAction<Cluster[]>>;
   searchCenter: LatLng;
   searchRadius: number;
   showAlert: (
@@ -29,6 +30,7 @@ interface PlaceNamesInputProps {
 const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
   placeLocations,
   setPlaceLocations,
+  setClusters,
   searchCenter,
   searchRadius,
   showAlert,
@@ -143,7 +145,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
           searchRadius,
           token
         );
-
+      setClusters([]);
       rateLimiter();
 
       const uniqueNames = new Set(
@@ -170,6 +172,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     rateLimiter,
     searchCenter,
     searchRadius,
+    setClusters,
     setPlaceLocations,
     showAlert,
     verifyPlaceNames,

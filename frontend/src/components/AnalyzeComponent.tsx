@@ -57,8 +57,8 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
         preference,
         idToken
       );
-      console.log('clusterResults: ', clusterResults);
-      console.log('type of clusterResults: ', typeof clusterResults);
+      //console.log('clusterResults: ', clusterResults);
+      //console.log('type of clusterResults: ', typeof clusterResults);
       rateLimiter();
 
       if (clusterResults.length <= 0) {

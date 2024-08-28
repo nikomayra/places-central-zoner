@@ -141,17 +141,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
       if (isInputDisabled) return;
       rateLimiter();
-
-      /* requestCountRef.current += 1;
-
-      if (requestCountRef.current >= 13) {
-        setIsInputDisabled(true);
-        showAlert('error', 'Too many requests. Please wait a moment.');
-        setTimeout(() => {
-          setIsInputDisabled(false);
-          requestCountRef.current = 0;
-        }, 60000);
-      }*/
     };
 
     // Initialize autocomplete only if it's not already initialized

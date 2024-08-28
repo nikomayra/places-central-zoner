@@ -68,9 +68,9 @@ const AuthenticatedApp: React.FC = () => {
   );
   const memoizedClusters = useMemo(() => clusters, [clusters]);
 
-  useEffect(() => {
-    setClusters([]);
-  }, [placeLocations]);
+  // useEffect(() => {
+  //   setClusters([]);
+  // }, [placeLocations]);
 
   useEffect(() => {
     loadLatestState();
@@ -117,6 +117,7 @@ const AuthenticatedApp: React.FC = () => {
         <PlaceNamesInput
           placeLocations={placeLocations}
           setPlaceLocations={setPlaceLocations}
+          setClusters={setClusters}
           searchCenter={searchCenter}
           searchRadius={searchRadius}
           showAlert={showAlert}
