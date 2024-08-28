@@ -68,9 +68,9 @@ const AuthenticatedApp: React.FC = () => {
   );
   const memoizedClusters = useMemo(() => clusters, [clusters]);
 
-  // useEffect(() => {
-  //   setClusters([]);
-  // }, [placeLocations]);
+  useEffect(() => {
+    setClusters([]);
+  }, [placeLocations]);
 
   useEffect(() => {
     loadLatestState();
