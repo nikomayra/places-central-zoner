@@ -2,6 +2,7 @@ from sklearn.cluster import KMeans, DBSCAN
 import numpy as np
 from itertools import combinations
 from app.utils import haversine_distance
+from sklearn.metrics import pairwise_distances
 
 def perform_clustering(places, place_names, place_latlngs, user_preference):
 
@@ -25,30 +26,34 @@ def perform_clustering(places, place_names, place_latlngs, user_preference):
             best_method = 'Brute Force'
             best_clusters = BF_valid_clusters
             best_score = BF_Score
+        print('DBSCAN BF_Score: ', BF_Score,'\n\n')
     
     # Apply DBSCAN
-    dbscan_clusters = small_dataset_clustering(place_latlngs, places, place_types)
+    dbscan_clusters = dbscan_clustering(place_latlngs, places, place_types)
+    # print('DBSCAN CLUSTERS: ', dbscan_clusters,'\n\n')
     DB_valid_clusters, DB_score = evaluate_clusters(dbscan_clusters, user_preference)
     if DB_score > best_score:
         best_method = 'DBScan'
         best_clusters = DB_valid_clusters
         best_score = DB_score
-
+    # print('DBSCAN VALID CLUSTERS: ', DB_valid_clusters,'\n\n')
+    print('DBSCAN DB_score: ', DB_score,'\n\n')
     # Apply KMeans and iterative refinement
-    initial_labels = initial_clustering(place_latlngs, max_clusters)
+    initial_labels = kmeans_clustering(place_latlngs, max_clusters)
     kmeans_clusters = iterative_refinement(initial_labels, places, place_types)
+    # print('KMEANS CLUSTERS: ', kmeans_clusters)
     KM_valid_clusters, KM_score = evaluate_clusters(kmeans_clusters, user_preference)
     if KM_score > best_score:
         best_method = 'KMeans'
         best_clusters = KM_valid_clusters
         best_score = KM_score
-
-    print('Method:', best_method)
+    print('KMEANS SCORE: ', KM_score,'\n\n')
+    print('Best Method:', best_method)
 
     return best_clusters
 
 # Initial clustering using KMeans
-def initial_clustering(coords, max_clusters):
+def kmeans_clustering(coords, max_clusters):
     kmeans = KMeans(n_clusters=max_clusters, random_state=0).fit(coords)
     return kmeans.labels_
 
@@ -127,11 +132,27 @@ def brute_force_clustering(coords, places, place_types):
             clusters.append(cluster)
     return clusters
 
-# Hierarchical clustering or DBSCAN for small datasets
-def small_dataset_clustering(coords, places, place_types):
-    db = DBSCAN(eps=0.05, min_samples=1).fit(coords)
+def calculate_dynamic_min_samples(coords, factor=0.05):
+    min_samples = max(1, int(len(coords) * factor))
+    return min_samples
+
+def calculate_dynamic_eps(coords, percentile=10):
+    distances = pairwise_distances(coords)
+    sorted_distances = np.sort(distances.flatten())
+    eps = sorted_distances[int(len(sorted_distances) * (percentile / 100))]
+    return eps
+
+# Hierarchical clustering or DBSCAN
+def dbscan_clustering(coords, places, place_types):
+    eps = calculate_dynamic_eps(coords)
+    min_samples = calculate_dynamic_min_samples(coords)
+    db = DBSCAN(eps=eps, min_samples=min_samples).fit(coords)
+    # print('DBSCAN RESULTS: ', db, '\n\n')
     labels = db.labels_
-    
+    # print('DBSCAN LABELS: ', labels, '\n\n')
+    if any(label < 0 for label in labels):
+        return []
+
     clusters = {i: [] for i in range(max(labels) + 1)}
     for label, info in zip(labels, places):
         clusters[label].append(info)
@@ -160,7 +181,6 @@ def evaluate_clusters(clusters, preference):
     count_valid = 0
     min_value = .00002
     max_value = .002
-    # wcss_threshold = .0006 - (.00029 * preference) # 0 -> .0012
     wcss_threshold = min_value + (max_value - min_value) * preference
     print('wcss_threshold',wcss_threshold)
 
@@ -205,10 +225,15 @@ def evaluate_clusters(clusters, preference):
 
     avg_wcss = total_wcss / count_valid if count_valid > 0 else float('inf')
 
+    weight = 2
+
     # Calculate combined metric
-    if avg_wcss == float('inf'):
-        combined_metric =  count_valid
+    if avg_wcss == 0:
+        combined_metric = float('inf')  # Handle division by zero
+    elif avg_wcss == float('inf'):
+        combined_metric = count_valid
     else:
-        combined_metric = (count_valid / avg_wcss)
-    # print("valid_clusters", valid_clusters)
+        combined_metric = (count_valid ** weight) / avg_wcss
+
+
     return valid_clusters, combined_metric

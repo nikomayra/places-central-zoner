@@ -74,6 +74,6 @@ def cluster_data(user_info, request):
 def latest_state(user_info):
     user = User.query.filter_by(id=user_info['sub']).first()
     if user:
-        return jsonify({'searched_places_state':user.searched_places, 'center_state':user.search_center, 'radius_state':user.search_radius}), 200
+        return jsonify({'clusters_state':user.clusters, 'searched_places_state':user.searched_places, 'center_state':user.search_center, 'radius_state':user.search_radius}), 200
     else:
         return jsonify({'error': 'User not found; no previous state.'}), 400
