@@ -9,6 +9,7 @@ def perform_search(place_names, search_center, search_radius, max_page_results):
     response_data=[]
     for placeName in place_names:
         results = []
+        placeName = placeName.strip()
         placeData = get_place_data(
             placeName, 
             (search_center['lat'], search_center['lng']), 
@@ -67,27 +68,6 @@ def get_place_data(placeName, searchCenter, searchRadius, maxPageResults):
     except requests.exceptions.RequestException as req_err:
         print(f'An error occurred: {req_err}')
     return None  # Return None in case of any error
-
-# Score how well the result names match the searched name
-# Find the best scoring result name vs searched name
-# Use that score to filter out all other results
-# Try to provide user with what they intended.
-# def refine_results(placeName, results):
-
-#     likeScore = []
-#     for place in results:
-#         likeScore.append(levenshtein(place['name'].casefold(), placeName.casefold()))
-
-#     bestScore = min(likeScore)
-#     # Filter results to exclude elements where likeScore != bestScore
-#     filtered_results = [place for i, place in enumerate(results) if likeScore[i] == bestScore]
-
-#     # Remove duplicate places
-#     unique_filtered_results = list({
-#         (place['lat'], place['lng']): place for place in filtered_results
-#     }.values())
-
-#     return unique_filtered_results
 
 
 def refine_results(place_name: str, results: List[Dict[str, str]]) -> List[Dict[str, str]]:
