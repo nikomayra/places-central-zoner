@@ -347,7 +347,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
             step={1}
             marks={false}
             min={1}
-            max={26}
+            max={15}
             style={{ flexGrow: 1 }}
           />
         </Box>
