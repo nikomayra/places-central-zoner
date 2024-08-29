@@ -17,6 +17,15 @@ Places Central Zoner is a web application that finds central zones which each co
 3. Press "Search" to mark them in the search area. <br>
 4. Adjust quality as needed & press "Analyze" to find central-zoned locations. <br>
 
+## Key Features:
+* Dynamic web layout with Materal-Ui
+* Google OAuth 2.0 authentication implicit flow
+* Persistent user state and timed sessions with expiration warning & re-login
+* Search location and radius adjustments with visuals and intuitive GUI and dynamic map
+* Significant search result refinement for optimal clustering analysis
+* Multiple clustering analysis methods with robust evaluation for best results
+* Simple UI/UX with clear results
+
 ## Visual usage/examples
 
 ### Map / Search GUI <br>
