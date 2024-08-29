@@ -156,3 +156,4 @@ def perform_clustering(places, place_names, place_latlngs, user_preference):
 - Refactor frontend for greater modularity and scalability.
 - Implement more robust error handling.
 - More thoroughly comment code.
+- Separate css style sheet(s)
