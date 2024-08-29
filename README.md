@@ -4,29 +4,30 @@ Places Central Zoner is a web application that finds central zones which each co
 
 ## Tech Stack:
 
-**Frontend:** React with TypeScript and Material-UI for the user interface.
-**Backend:** Flask for the backend logic and API.  
-**Database:** PostgreSQL using Supabase for user state management.
-**Authentication:** Google's OAuth2.0 Implicit Flow with react-OAuth/Google npm & google-oauth python libraries
-**Mapping and Geolocation:** Google Maps Javascript & Places API
-**Deployment:** Render.com for hosting and managing the application.
+**Frontend:** React with TypeScript and Material-UI for the user interface. <br>
+**Backend:** Flask for the backend logic and API. <br>
+**Database:** PostgreSQL using Supabase for user state management. <br>
+**Authentication:** Google's OAuth2.0 Implicit Flow with react-OAuth/Google npm & google-oauth python libraries. <br>
+**Mapping and Geolocation:** Google Maps Javascript & Places API. <br>
+**Deployment:** Render.com for hosting and managing the application. <br>
 
 For searched places results refinement I use several passes to try to reduce API places results to the core intended places per the user. A couple cases could be typing in Walgreens and getting Walgreens Photo & Walgreens Pharmacy which create new types of places and in turn disrupts the effectiveness of the clustering. Another edge case would be if we searched for LA Fitness in Gainesville, FL where there are no LA Fitnesses, the results would return other places with "Fitness" in their names disrupting the clustering. 
 
 For clustering the searched places I use a mixture of 3 different techniques (Brute force combinations, DBScan & KMeans with iterative refinement) for clustering and return the best results evaluated by a combination of metrics partially influenced by the user.
 
 ## How to use
-1. Enter search center and adjust radius (miles).
-2. Enter between 2 and 5 different locations.
-3. Press "Search" to mark them in the search area.
-4. Adjust quality as needed & press "Analyze" to find central-zoned locations.
+1. Enter search center and adjust radius (miles). <br>
+2. Enter between 2 and 5 different locations. <br>
+3. Press "Search" to mark them in the search area. <br>
+4. Adjust quality as needed & press "Analyze" to find central-zoned locations. <br>
 
 ## Visual usage/examples
 
 ### Map / Search GUI <br>
-<img src="https://github.com/user-attachments/assets/4c24dd0c-4d2a-4466-8ce7-b0f45ca4952d" width="300"><br>
+<img src="https://github.com/user-attachments/assets/4c24dd0c-4d2a-4466-8ce7-b0f45ca4952d" width="300">
+<img src="https://github.com/user-attachments/assets/233a7457-cb43-4de1-9f79-3819e76609b3" width="300"><br>
 * Logged in and previous state loaded from database
-  * Searched locations markers, search radius bias, search center & analyzed zones per user preference
+  * Searched locations markers, zones & zone centers, search radius bias, search center & analyzed zones per user preference
 * Logout button, Map, Search center, search radius & place results GUI
 
 #### Functional Details:
@@ -90,10 +91,56 @@ def refine_results(place_name: str, results: List[Dict[str, str]]) -> List[Dict[
 ```
 
 ### Analyze / Quality GUI <br>
-<img src="https://github.com/user-attachments/assets/367cfce3-55ec-448f-942c-482ad991067b" width="300"><br>
+<img src="https://github.com/user-attachments/assets/367cfce3-55ec-448f-942c-482ad991067b" width="300">
+<img src="https://github.com/user-attachments/assets/cc2c1390-8c3b-43d3-aece-92e0aba6284f" width="300"><br>
 * Search place text boxes, add/delete, search button GUI
 * Quality preference toggle buttons, zone results list & analyze button GUI
 
+#### Functional Details:
+* Quality preference setting defines a factor from 0, .25, .5, .75, 1 which then defines a WCSS (within cluster squared sum) score threshold value for cluster evaluation.
+   * WCSS is a measure of how tightly clustered the clusters are. It was chosen over radius because you can have zones where a few places are tightly clusters and an outlier skewing the radius.
+* Analysis in the backend is a 2-3 part method. It attempts brute force, dbscan and kmeans, evaluates each methods results and returns the best results as defined by wcss filtering, duplicate removal and a combined-weighted metric score based on cluster count and average wcss score.
+
+Backend clustering methods excerpt:
+```
+def perform_clustering(places, place_names, place_latlngs, user_preference):
+
+    place_types = set(place_names)  # Collect unique place names
+    max_clusters = dynamic_max_clusters(len(place_latlngs), place_types)
+
+    best_method = None
+    best_clusters = None
+    best_score = float('-inf')
+
+    # Apply brute-force if feasible
+    if len(place_latlngs) <= 10 and len(place_types) <= 3:
+        # Use brute-force clustering for very small datasets
+        brute_force_clusters = brute_force_clustering(place_latlngs, places, place_types)
+        BF_valid_clusters, BF_Score = evaluate_clusters(brute_force_clusters, user_preference)
+        if BF_Score > best_score:
+            best_method = 'Brute Force'
+            best_clusters = BF_valid_clusters
+            best_score = BF_Score
+    
+    # Apply DBSCAN
+    dbscan_clusters = dbscan_clustering(place_latlngs, places, place_types)
+    DB_valid_clusters, DB_score = evaluate_clusters(dbscan_clusters, user_preference)
+    if DB_score > best_score:
+        best_method = 'DBScan'
+        best_clusters = DB_valid_clusters
+        best_score = DB_score
+
+    # Apply KMeans and iterative refinement
+    initial_labels = kmeans_clustering(place_latlngs, max_clusters)
+    kmeans_clusters = iterative_refinement(initial_labels, places, place_types)
+    KM_valid_clusters, KM_score = evaluate_clusters(kmeans_clusters, user_preference)
+    if KM_score > best_score:
+        best_method = 'KMeans'
+        best_clusters = KM_valid_clusters
+        best_score = KM_score
+
+    return best_clusters
+```
 
 ## Potential future improvements
 
