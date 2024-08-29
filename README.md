@@ -11,10 +11,6 @@ Places Central Zoner is a web application that finds central zones which each co
 **Mapping and Geolocation:** Google Maps Javascript & Places API. <br>
 **Deployment:** Render.com for hosting and managing the application. <br>
 
-For searched places results refinement I use several passes to try to reduce API places results to the core intended places per the user. A couple cases could be typing in Walgreens and getting Walgreens Photo & Walgreens Pharmacy which create new types of places and in turn disrupts the effectiveness of the clustering. Another edge case would be if we searched for LA Fitness in Gainesville, FL where there are no LA Fitnesses, the results would return other places with "Fitness" in their names disrupting the clustering. 
-
-For clustering the searched places I use a mixture of 3 different techniques (Brute force combinations, DBScan & KMeans with iterative refinement) for clustering and return the best results evaluated by a combination of metrics partially influenced by the user.
-
 ## How to use
 1. Enter search center and adjust radius (miles). <br>
 2. Enter between 2 and 5 different locations. <br>
