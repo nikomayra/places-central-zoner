@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from app.controllers.data_controller import search_places, cluster_data, latest_state
+from app.controllers.data_controller import search_places, cluster_data, latest_state, ping_db
 from app.middleware import session_required
 from app.limiter import limiter
 
@@ -22,3 +22,7 @@ def cluster_route(user_info):
 @session_required
 def latest_state_route(user_info):
     return latest_state(user_info)
+
+@data_bp.route("/ping-db", methods=["GET"])
+def ping_db_route():
+    return ping_db()

@@ -4,8 +4,22 @@ from app.services.cluster_service import perform_clustering
 import numpy as np
 from app.models import User
 from app.extensions import db
+import psycopg2
+import os
 
 MILES_TO_METERS = 1609.34
+
+def ping_db():
+    try:
+        conn = psycopg2.connect(os.getenv("SUPABASE_DB_URL"))
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return jsonify({"success": True, "result": result[0]})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # Example search_params structure: 
     # data:  {'placeNames': ['starbucks', 'chipotle'], 
