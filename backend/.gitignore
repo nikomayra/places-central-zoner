@@ -8,3 +8,5 @@ instance/
 *.swp
 *.swo
 /tests
+venv
+.venv

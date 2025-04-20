@@ -22,7 +22,3 @@ def cluster_route(user_info):
 @session_required
 def latest_state_route(user_info):
     return latest_state(user_info)
-
-@data_bp.route("/ping-db", methods=["GET"])
-def ping_db_route():
-    return ping_db()
