@@ -6,10 +6,11 @@ Places Central Zoner is a web application that finds central zones which each co
 
 **Frontend:** React with TypeScript and Material-UI for the user interface. <br>
 **Backend:** Flask for the backend logic and API. <br>
-**Database:** PostgreSQL using Supabase for user state management. <br>
-**Authentication:** Google's OAuth2.0 Implicit Flow with react-OAuth/Google npm & google-oauth python libraries. <br>
-**Mapping and Geolocation:** Google Maps Javascript & Places API. <br>
+**Access:** Public demo with server-side request rate limiting. <br>
+**Mapping:** Google Maps JavaScript and Places APIs. <br>
 **Deployment:** Render.com for hosting and managing the application. <br>
+
+Earlier versions used Google sign-in, PostgreSQL/Supabase for saved user state, and Redis-backed rate-limit configuration. Those pieces remain in the Git history but were removed from the live version to reduce demo friction and eliminate unnecessary services that could sleep.
 
 ## How to use
 1. Enter search center and adjust radius (miles). <br>
@@ -18,9 +19,9 @@ Places Central Zoner is a web application that finds central zones which each co
 4. Adjust quality as needed & press "Analyze" to find central-zoned locations. <br>
 
 ## Key Features:
-* Dynamic web layout with Materal-Ui
-* Google OAuth 2.0 authentication implicit flow
-* Persistent user state and timed sessions with expiration warning & re-login
+* Dynamic web layout with Material UI
+* Public access without an account or login wall
+* Server-side limits on billable Google Places searches
 * Search location and radius adjustments with visuals and intuitive GUI and dynamic map
 * Significant search result refinement for optimal clustering analysis
 * Multiple clustering analysis methods with robust evaluation for best results
@@ -31,12 +32,11 @@ Places Central Zoner is a web application that finds central zones which each co
 ### Map / Search GUI <br>
 <img src="https://github.com/user-attachments/assets/4c24dd0c-4d2a-4466-8ce7-b0f45ca4952d" width="300">
 <img src="https://github.com/user-attachments/assets/233a7457-cb43-4de1-9f79-3819e76609b3" width="300"><br>
-* Logged in and previous state loaded from database
-  * Searched locations markers, zones & zone centers, search radius bias, search center & analyzed zones per user preference
-* Logout button, Map, Search center, search radius & place results GUI
+* Searched location markers, zones and zone centers, search-radius bias, search center, and analyzed zones
+* Map, search center, search radius, and place-results GUI
 
 #### Functional Details:
-* Using Google OAuth id-token to authenticate and decode user id to pull previous state from postgres database on Supabase.
+* The app is intentionally stateless: refreshing starts a new session and no location searches or credentials are persisted.
 * Search center uses Google's Autocomplete widget, part of Places API
 * Search button makes request to backend with search center, radius, and user input place names.
   * Backend makes text search Places API calls for each place name and then makes a best effort to reduce and refine to the exact places the user intended.
@@ -157,3 +157,41 @@ def perform_clustering(places, place_names, place_latlngs, user_preference):
 - Implement more robust error handling.
 - More thoroughly comment code.
 - Separate css style sheet(s)
+
+## Local development
+
+The app reads these environment variables from the Flask service at runtime:
+
+```text
+GOOGLE_PLACES_API_KEY=your-server-side-places-key
+GOOGLE_MAPS_BROWSER_API_KEY=your-browser-maps-key
+```
+
+Install and run the frontend from `frontend/` with `npm install` and `npm run dev`. Install the backend dependencies from `backend/requirements.txt`, then run `python wsgi.py` from `backend/`.
+
+The repository pins Python 3.12.8 in `.python-version` because its scientific-computing dependencies do not support Render's newer default Python runtime.
+
+`npm run build` writes the production frontend directly to `backend/dist`, where Flask serves it.
+
+## Render deployment
+
+No database or Redis service is required. Configure the two Google variables above in Render. The frontend reads its public Maps key from `/api/client-config`, so builds no longer depend on it being present at build time. The in-process rate limiter resets when the web service restarts, which is an intentional tradeoff for this single-instance demo deployment.
+
+When the Render service's root directory is the repository root, use `pip install -r backend/requirements.txt && cd frontend && npm ci && npm run build` as the build command and `cd backend && gunicorn wsgi:app` as the start command. Building both halves on Render prevents the checked-in frontend bundle from becoming stale.
+
+## Google Cloud API safety
+
+This app requires only:
+
+- **Maps JavaScript API** for the map, markers, and circles.
+- **Places API** for the existing JavaScript city-autocomplete widget.
+- **Places API (New)** for the backend `SearchTextRequest` calls.
+
+It does not use Google's Geolocation, Geocoding, Directions, Distance Matrix, Elevation, Roads, Static Maps, Street View, Android, or iOS APIs. Browser location is not requested.
+
+Use two restricted keys:
+
+- Restrict `GOOGLE_MAPS_BROWSER_API_KEY` by HTTP referrer to the deployed website and by API to Maps JavaScript API and Places API.
+- Restrict `GOOGLE_PLACES_API_KEY` by API to Places API (New). This server key is never sent to the browser.
+
+For this low-traffic demo, conservative starting quotas are 50 Maps JavaScript map loads per day/10 per minute, 250 legacy Places requests per day/30 per minute for autocomplete, and 100 Places API (New) `SearchTextRequest` calls per day/20 per minute. The Flask endpoint additionally permits two search submissions per minute per visitor IP; each submission makes between two and five `SearchTextRequest` calls. Budget alerts are useful warnings, but quotas are the spending control.

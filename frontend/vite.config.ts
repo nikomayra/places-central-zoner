@@ -4,6 +4,12 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Flask serves this directory in production, so every normal build now
+    // creates the exact frontend bundle that Render will run.
+    outDir: '../backend/dist',
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': {

@@ -47,15 +47,9 @@ const AnalyzeComponent: React.FC<AnalyzeComponentProps> = ({
   const handleAnalyze = async () => {
     try {
       setToggleAnalyzeProgressBar(true);
-      const idToken = sessionStorage.getItem('token');
-      if (!idToken) {
-        console.error('No token found...');
-        return;
-      }
       const clusterResults = await axiosService.analyzePlaces(
         placeLocations,
-        preference,
-        idToken
+        preference
       );
       //console.log('clusterResults: ', clusterResults);
       //console.log('type of clusterResults: ', typeof clusterResults);

@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:ui": "powershell -Command \"Remove-Item -Recurse -Force ../backend/dist; cd ../frontend; npm run build; Copy-Item -Path dist -Destination ../backend -Recurse -Force\"",
-    "deploy:full": "powershell -Command \"npm run build:ui ; if ($?) {cd ../backend ; git add . ; git commit -m \"uibuild\" ; git push} else {echo \"Build failed. Skipping Git operations.\"}\"",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -16,11 +14,9 @@
     "@emotion/styled": "^11.11.5",
     "@mui/icons-material": "^5.16.4",
     "@mui/material": "^5.16.4",
-    "@react-oauth/google": "^0.12.1",
     "@types/react-window": "^1.8.8",
     "@vis.gl/react-google-maps": "^1.1.0",
     "axios": "^1.7.2",
-    "dayjs": "^1.11.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-window": "^1.8.10"

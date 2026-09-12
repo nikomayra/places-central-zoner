@@ -1,9 +1,14 @@
-import json, requests
+import requests
 from app.utils import calculate_bounding_box, haversine_distance
 from flask import current_app
 from typing import List, Dict
 import re
 from difflib import SequenceMatcher
+
+
+class PlacesApiError(Exception):
+    """Raised when Google Places cannot complete a search request."""
+
 
 def perform_search(place_names, search_center, search_radius, max_page_results):
     response_data=[]
@@ -52,22 +57,29 @@ def get_place_data(placeName, searchCenter, searchRadius, maxPageResults):
                 'X-Goog-Api-Key': current_app.config['GOOGLE_PLACES_API_KEY'],
                 'X-Goog-FieldMask': 'places.displayName,places.location'}
 
-    json_data = json.dumps(data)
-
     try:
-        response = requests.post(url, data=json_data, headers=headers)
-        response.raise_for_status()  # Raise an error for bad status codes
-        data = response.json()
-        return data
-    except requests.exceptions.HTTPError as http_err:
-        print(f'HTTP error occurred: {http_err}')
-    except requests.exceptions.ConnectionError as conn_err:
-        print(f'Connection error occurred: {conn_err}')
-    except requests.exceptions.Timeout as timeout_err:
-        print(f'Timeout error occurred: {timeout_err}')
-    except requests.exceptions.RequestException as req_err:
-        print(f'An error occurred: {req_err}')
-    return None  # Return None in case of any error
+        response = requests.post(url, json=data, headers=headers, timeout=15)
+    except requests.exceptions.RequestException as error:
+        current_app.logger.exception('Could not reach the Google Places API')
+        raise PlacesApiError('Could not reach the Google Places API.') from error
+
+    if not response.ok:
+        try:
+            google_message = response.json().get('error', {}).get('message')
+        except requests.exceptions.JSONDecodeError:
+            google_message = None
+
+        current_app.logger.error(
+            'Google Places API returned %s: %s',
+            response.status_code,
+            google_message or response.reason,
+        )
+        detail = google_message or response.reason or 'Unknown Google API error'
+        raise PlacesApiError(
+            f'Google Places API rejected the request: {detail}'
+        )
+
+    return response.json()
 
 
 def refine_results(place_name: str, results: List[Dict[str, str]]) -> List[Dict[str, str]]:

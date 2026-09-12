@@ -1,6 +1,5 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
-from app.extensions import db, migrate
 from app.blueprints import register_blueprints
 from .config import Config
 from app.limiter import create_limiter
@@ -13,11 +12,7 @@ def create_app():
     # Load configuration
     app.config.from_object(Config)
     
-    # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-
-    # Init limiter
+    # Initialize request rate limiting before registering limited routes.
     create_limiter(app)
     
     # Register blueprints

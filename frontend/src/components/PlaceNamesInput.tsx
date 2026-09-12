@@ -13,6 +13,7 @@ import {
 import { Delete } from '@mui/icons-material';
 import { PlaceLocation, LatLng, Cluster } from '../interfaces/interfaces';
 import axiosService from '../services/axiosService';
+import axios from 'axios';
 
 interface PlaceNamesInputProps {
   placeLocations: PlaceLocation[];
@@ -98,28 +99,22 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
     return true;
   }, [levenshtein, placeNames]);
 
-  // 5 req/min MAX, 2 MIN (separate google API calls for each place)
+  // Match the backend's two search submissions per minute limit.
   const rateLimiter = useCallback(() => {
-    setRequestCount((prevCount) => prevCount + 1);
-    const limit = Math.floor(10 / Object.entries(nameCount).length);
-    if (requestCount > limit) {
+    const nextRequestCount = requestCount + 1;
+    if (nextRequestCount >= 2) {
       setIsButtonDisabled(true);
       setRequestCount(0);
       setTimeout(() => setIsButtonDisabled(false), 60000);
+    } else {
+      setRequestCount(nextRequestCount);
     }
-  }, [nameCount, requestCount]);
+  }, [requestCount]);
 
   const handleSearch = useCallback(async () => {
     try {
       setToggleSearchProgessBar(true);
       setPlaceLocations([]);
-
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        console.error('No token found...');
-        setToggleSearchProgessBar(false);
-        return;
-      }
 
       // Ensure placeNames aren't blank and are greater than 2 characters long
       if (placeNames.every((str) => str.length < 2)) {
@@ -142,8 +137,7 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
         await axiosService.searchPlaces(
           placeNames,
           searchCenter,
-          searchRadius,
-          token
+          searchRadius
         );
       setClusters([]);
       rateLimiter();
@@ -164,7 +158,10 @@ const PlaceNamesInput: React.FC<PlaceNamesInputProps> = ({
       setPlaceLocations(placeLocationsServer);
     } catch (error) {
       console.error('Error during search:', error);
-      showAlert('error', 'Search failed.');
+      const serverMessage = axios.isAxiosError(error)
+        ? error.response?.data?.error
+        : null;
+      showAlert('error', serverMessage || 'Search failed.');
       setToggleSearchProgessBar(false);
     }
   }, [
